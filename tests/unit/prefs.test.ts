@@ -1,23 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMotionPrefs, supportsWebGL } from '../../src/motion/prefs';
 
-function fakeHost(initial: boolean, forcedColors = false) {
-  const listeners = new Set<(e: { matches: boolean }) => void>();
-  const query = {
-    matches: initial,
-    addEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.add(l),
-    removeEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.delete(l),
+type Listener = (e: { matches: boolean }) => void;
+
+function fakeQuery(matches: boolean) {
+  const listeners = new Set<Listener>();
+  return {
+    matches,
+    listeners,
+    addEventListener: (_: string, l: Listener) => listeners.add(l),
+    removeEventListener: (_: string, l: Listener) => listeners.delete(l),
+    emit(next: boolean) {
+      this.matches = next;
+      for (const l of listeners) l({ matches: next });
+    },
   };
+}
+
+function fakeHost(initial: boolean, forcedColors = false) {
+  const reduced = fakeQuery(initial);
+  const forced = fakeQuery(forcedColors);
   return {
     host: {
       matchMedia: (q: string) =>
-        (q.includes('forced-colors') ? { matches: forcedColors } : query) as unknown as MediaQueryList,
+        (q.includes('forced-colors') ? forced : reduced) as unknown as MediaQueryList,
     },
-    emit(matches: boolean) {
-      query.matches = matches;
-      for (const l of listeners) l({ matches });
-    },
-    count: () => listeners.size,
+    emit: (matches: boolean) => reduced.emit(matches),
+    emitForced: (matches: boolean) => forced.emit(matches),
+    count: () => reduced.listeners.size + forced.listeners.size,
   };
 }
 
@@ -49,6 +59,20 @@ describe('forced colours', () => {
     fake.emit(false);
     expect(listener).toHaveBeenCalledWith(true);
   });
+  it('notifies when forced colours are toggled at runtime and unsubscribes from both queries', () => {
+    const fake = fakeHost(false, false);
+    const prefs = createMotionPrefs(fake.host);
+    const listener = vi.fn();
+    const off = prefs.onChange(listener);
+    fake.emitForced(true);
+    expect(listener).toHaveBeenLastCalledWith(true);
+    fake.emitForced(false);
+    expect(listener).toHaveBeenLastCalledWith(false);
+    off();
+    expect(fake.count()).toBe(0);
+    fake.emitForced(true);
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('supportsWebGL', () => {
@@ -71,5 +95,11 @@ describe('supportsWebGL', () => {
         }) as unknown as HTMLCanvasElement,
     };
     expect(supportsWebGL(doc)).toBe(false);
+  });
+  it('releases the probe context so it does not count against the browser limit', () => {
+    const loseContext = vi.fn();
+    const ctx = { getExtension: (name: string) => (name === 'WEBGL_lose_context' ? { loseContext } : null) };
+    expect(supportsWebGL(docWith(ctx))).toBe(true);
+    expect(loseContext).toHaveBeenCalledOnce();
   });
 });

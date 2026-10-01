@@ -19,8 +19,13 @@ export function createMotionPrefs(host: MatchMediaHost): MotionPrefs {
     reduced: () => query.matches || forced.matches,
     onChange(listener) {
       const handler = () => listener(query.matches || forced.matches);
+      // Both can change at runtime (e.g. a Windows contrast theme toggles forced colours).
       query.addEventListener('change', handler);
-      return () => query.removeEventListener('change', handler);
+      forced.addEventListener('change', handler);
+      return () => {
+        query.removeEventListener('change', handler);
+        forced.removeEventListener('change', handler);
+      };
     },
   };
 }
@@ -30,7 +35,10 @@ type CanvasFactory = { createElement(tag: 'canvas'): HTMLCanvasElement };
 export function supportsWebGL(doc: CanvasFactory): boolean {
   try {
     const canvas = doc.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    // Release the probe now: browsers cap live WebGL contexts and evict the oldest one.
+    gl?.getExtension?.('WEBGL_lose_context')?.loseContext();
+    return Boolean(gl);
   } catch {
     return false;
   }
