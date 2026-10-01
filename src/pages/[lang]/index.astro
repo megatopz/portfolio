@@ -1,0 +1,19 @@
+---
+import LanguageSwitch from '../../components/LanguageSwitch.astro';
+import { locales, type Locale } from '../../i18n/config';
+import { t } from '../../i18n/ui';
+import Base from '../../layouts/Base.astro';
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang } }));
+}
+
+const locale = Astro.params.lang as Locale;
+---
+
+<Base title={t(locale, 'home.title')} description={t(locale, 'home.description')} locale={locale}>
+  <header slot="header" class="site-header">
+    <LanguageSwitch locale={locale} />
+  </header>
+  <h1>Gonçalo Guerra</h1>
+</Base>

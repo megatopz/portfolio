@@ -1,0 +1,64 @@
+---
+import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/jetbrains-mono/wght.css';
+import '../styles/layers.css';
+import '../styles/reset.css';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import { ClientRouter } from 'astro:transitions';
+import { defaultLocale, locales, type Locale } from '../i18n/config';
+import { alternatePath } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Omit on non-localized pages (lab, 404). */
+  locale?: Locale;
+  noindex?: boolean;
+  surface?: 'paper' | 'ink';
+}
+
+const { title, description, locale, noindex = false, surface = 'paper' } = Astro.props;
+const lang = locale ?? defaultLocale;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const alternates = locale
+  ? locales.map((l) => ({
+      hreflang: l,
+      href: new URL(alternatePath(Astro.url.pathname, l), Astro.site).href,
+    }))
+  : [];
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {alternates.map((a) => (
+      <link rel="alternate" hreflang={a.hreflang} href={a.href} />
+    ))}
+    {locale && (
+      <link
+        rel="alternate"
+        hreflang="x-default"
+        href={new URL(alternatePath(Astro.url.pathname, defaultLocale), Astro.site).href}
+      />
+    )}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <ClientRouter fallback="swap" />
+  </head>
+  <body data-surface={surface}>
+    <a class="skip-link" href="#main">
+      {t(lang, 'skip.toMain')}
+    </a>
+    <slot name="header" />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+  </body>
+</html>

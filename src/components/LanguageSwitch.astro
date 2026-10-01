@@ -1,0 +1,47 @@
+---
+import { locales, type Locale } from '../i18n/config';
+import { alternatePath } from '../i18n/routes';
+import { t } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<nav class="lang-switch" aria-label={t(locale, 'lang.label')}>
+  <ul role="list">
+    {locales.map((l) => (
+      <li>
+        <a
+          class="label"
+          href={alternatePath(Astro.url.pathname, l)}
+          hreflang={l}
+          lang={l}
+          aria-current={l === locale ? 'true' : undefined}
+        >
+          {l.toUpperCase()}
+          <span class="visually-hidden">{t(l, l === 'pt' ? 'lang.pt' : 'lang.en')}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  ul {
+    display: flex;
+    gap: var(--space-3);
+    padding: 0;
+    list-style: none;
+  }
+  a {
+    text-decoration: none;
+    color: var(--fg-muted);
+  }
+  a[aria-current='true'] {
+    color: var(--fg);
+    text-decoration: underline;
+  }
+</style>
