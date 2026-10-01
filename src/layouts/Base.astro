@@ -1,5 +1,7 @@
 ---
 import '@fontsource-variable/archivo/wdth.css';
+// Same file the @font-face above emits (Vite dedupes the asset), so the preload is never a second fetch.
+import archivoLatin from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url';
 import '@fontsource-variable/jetbrains-mono/wght.css';
 import '../styles/layers.css';
 import '../styles/reset.css';
@@ -36,6 +38,7 @@ const alternates = locale
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preload" href={archivoLatin} as="font" type="font/woff2" crossorigin />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical.href} />

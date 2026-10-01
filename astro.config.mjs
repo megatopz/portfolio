@@ -11,6 +11,8 @@ const site = siteUrl.replace(/\/$/, '');
 export default defineConfig({
   site,
   trailingSlash: 'always',
+  // Base.css is small (~9 KB); inlining it removes the render-blocking request in front of the LCP.
+  build: { inlineStylesheets: 'always' },
   integrations: [
     sitemap({
       // The root only redirects to /pt/, so it is not a page to index.
