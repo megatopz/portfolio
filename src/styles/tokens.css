@@ -1,0 +1,54 @@
+@layer tokens {
+  :root {
+    --ink: #0a0a0a;
+    --paper: #efede8;
+    --graphite: #6b6b6b;
+    --ash: #a3a3a3;
+
+    --font-display: 'Archivo Variable', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --font-text: 'Archivo Variable', 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono:
+      'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.9rem);
+    --step-0: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+    --step-1: clamp(1.33rem, 1.2rem + 0.6vw, 1.58rem);
+    --step-2: clamp(1.66rem, 1.45rem + 1vw, 2.11rem);
+    --step-3: clamp(2.07rem, 1.7rem + 1.8vw, 2.81rem);
+    --step-4: clamp(2.59rem, 2rem + 3vw, 3.75rem);
+    --step-hero: clamp(3.5rem, 1rem + 12vw, 14vw);
+    --measure: 68ch;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+    --space-24: 6rem;
+
+    --t-fast: 150ms;
+    --t-base: 250ms;
+    --t-slow: 500ms;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+    --rule-width: 1px;
+  }
+
+  [data-surface='paper'] {
+    --bg: var(--paper);
+    --fg: var(--ink);
+    --fg-muted: var(--graphite);
+    --rule: color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+
+  [data-surface='ink'] {
+    --bg: var(--ink);
+    --fg: var(--paper);
+    --fg-muted: var(--ash);
+    --rule: color-mix(in srgb, var(--paper) 12%, transparent);
+  }
+}

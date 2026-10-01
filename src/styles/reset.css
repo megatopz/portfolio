@@ -1,0 +1,49 @@
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  * {
+    margin: 0;
+  }
+  html {
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+  }
+  body {
+    min-height: 100svh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  img,
+  picture,
+  svg,
+  canvas,
+  video {
+    display: block;
+    max-width: 100%;
+  }
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  p {
+    overflow-wrap: break-word;
+  }
+  h1,
+  h2,
+  h3 {
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
