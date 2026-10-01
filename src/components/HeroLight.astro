@@ -15,8 +15,8 @@ const texture = await getImage({ src, width: 1280, format: 'webp' });
   <Picture
     src={src}
     alt={alt}
-    widths={[640, 960, 1280, 1600]}
-    sizes="(min-width: 60rem) 60vw, 100vw"
+    widths={[640, 960, 1280]}
+    sizes="(min-width: 60rem) 60vw, calc(100vw - 4rem)"
     formats={['avif', 'webp']}
     loading="eager"
     fetchpriority="high"
