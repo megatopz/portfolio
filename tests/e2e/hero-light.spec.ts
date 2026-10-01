@@ -145,6 +145,7 @@ test.describe('lab light tuning', () => {
 
   test('drops brightness values where the edge would outshine the centre', async ({ page }) => {
     await page.goto('/lab/luz/?min=1.4&max=0.9');
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
     await expect(hero(page)).toHaveAttribute('data-light-min', '0.75');
     await expect(hero(page)).toHaveAttribute('data-light-max', '1.35');
   });

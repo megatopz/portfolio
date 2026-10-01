@@ -1,6 +1,6 @@
 import { Mesh, Program, Renderer, Texture, Triangle } from 'ogl';
 import { clampDpr, driftPosition, lerp2, type Vec2 } from '../../motion/math';
-import { resolveLightParams, type LightInput } from './light-params';
+import type { LightParams } from './light-params';
 import { fragment, vertex } from './light-shaders';
 
 export interface LightScene {
@@ -15,17 +15,16 @@ export interface LightSceneOptions {
   canvas: HTMLCanvasElement;
   image: HTMLImageElement;
   onContextLost(): void;
-  /** Exposure and radius overrides; missing or invalid values fall back to the defaults. */
-  light?: LightInput;
+  /** Exposure far from and at the light, and its radius (resolved by the caller). */
+  light: LightParams;
 }
 
 export function createLightScene({
   canvas,
   image,
   onContextLost,
-  light = {},
+  light: { min, max, radius },
 }: LightSceneOptions): LightScene {
-  const { min, max, radius } = resolveLightParams(light);
   const renderer = new Renderer({
     canvas,
     dpr: clampDpr(window.devicePixelRatio),

@@ -1,7 +1,7 @@
 ---
 import eu from '../../assets/photos/eu.jpg';
 import HeroLight from '../../components/HeroLight.astro';
-import { describeLightParams, LIGHT_DEFAULTS } from '../../gl/light/light-params';
+import { LIGHT_DEFAULTS } from '../../gl/light/light-params';
 import Base from '../../layouts/Base.astro';
 ---
 
@@ -15,11 +15,35 @@ import Base from '../../layouts/Base.astro';
       sizes="calc(100vw - 4rem)"
     />
     <p class="label" data-light-values>
-      {describeLightParams(LIGHT_DEFAULTS)}
+      min {LIGHT_DEFAULTS.min} · max {LIGHT_DEFAULTS.max} · raio {LIGHT_DEFAULTS.radius}
     </p>
     <p>
       <a href="/lab/tinta-a/">Ir para tinta A</a>
     </p>
+    <script is:inline>
+      // Lab only: copy ?min&max&radius onto this page's hero, to try values without a rebuild. The
+      // shared HeroLight has no URL code; mountHeroLight drops invalid values and writes back the ones
+      // in effect when the effect starts, which are then shown below the photo. Inline so the lab adds
+      // no request in front of the hero image.
+      (() => {
+        const hero = document.querySelector('[data-light-lab] [data-hero-light]');
+        const values = document.querySelector('[data-light-lab] [data-light-values]');
+        if (!hero || !values) return;
+        const query = new URLSearchParams(window.location.search);
+        for (const [param, key] of [
+          ['min', 'lightMin'],
+          ['max', 'lightMax'],
+          ['radius', 'lightRadius'],
+        ]) {
+          const value = query.get(param);
+          if (value !== null) hero.dataset[key] = value;
+        }
+        new MutationObserver(() => {
+          const { lightMin, lightMax, lightRadius } = hero.dataset;
+          values.textContent = `min ${lightMin} · max ${lightMax} · raio ${lightRadius}`;
+        }).observe(hero, { attributes: true, attributeFilter: ['data-light-radius'] });
+      })();
+    </script>
   </section>
 </Base>
 
@@ -33,27 +57,3 @@ import Base from '../../layouts/Base.astro';
     height: min(80vh, 60rem);
   }
 </style>
-
-<script>
-  import { describeLightParams, resolveLightParams } from '../../gl/light/light-params';
-
-  // Only this lab page reads ?min&max&radius, to try values without a rebuild. The shared HeroLight
-  // has no URL code: elsewhere it always uses the defaults fixed in light-params.ts.
-  document.addEventListener('astro:page-load', () => {
-    const lab = document.querySelector<HTMLElement>('[data-light-lab]');
-    const hero = lab?.querySelector<HTMLElement>('[data-hero-light]');
-    if (!lab || !hero) return;
-    const query = new URLSearchParams(window.location.search);
-    const light = resolveLightParams({
-      min: query.get('min') ?? undefined,
-      max: query.get('max') ?? undefined,
-      radius: query.get('radius') ?? undefined,
-    });
-    // mountHeroLight reads these when the scene starts (on idle, after this handler).
-    hero.dataset.lightMin = String(light.min);
-    hero.dataset.lightMax = String(light.max);
-    hero.dataset.lightRadius = String(light.radius);
-    const values = lab.querySelector('[data-light-values]');
-    if (values) values.textContent = describeLightParams(light);
-  });
-</script>

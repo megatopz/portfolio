@@ -1,6 +1,7 @@
 import { toUv } from '../../motion/math';
 import { createMotionPrefs, supportsWebGL } from '../../motion/prefs';
 import { createTiltControl, type TiltControl, type TiltHost } from '../../motion/tilt-control';
+import { resolveLightParams } from './light-params';
 import type { LightScene } from './light-scene';
 
 export type HeroLightState = 'idle' | 'running' | 'paused' | 'fallback' | 'off';
@@ -86,11 +87,22 @@ export function mountHeroLight(root: HTMLElement): () => void {
         loadImage(textureUrl),
       ]);
       if (disposed || prefs.reduced()) return;
+      // Only /lab/luz/ sets data-light-* (from its URL); everywhere else the defaults apply. Invalid
+      // values are dropped, and the values in effect are written back so the lab can show them.
+      const light = resolveLightParams({
+        min: root.dataset.lightMin,
+        max: root.dataset.lightMax,
+        radius: root.dataset.lightRadius,
+      });
+      Object.assign(root.dataset, {
+        lightMin: String(light.min),
+        lightMax: String(light.max),
+        lightRadius: String(light.radius),
+      });
       scene = createLightScene({
         canvas,
         image,
-        // Read late so a page (only /lab/luz/) can tune these before the idle start; unset → defaults.
-        light: { min: root.dataset.lightMin, max: root.dataset.lightMax, radius: root.dataset.lightRadius },
+        light,
         onContextLost: () => {
           teardownScene();
           setState('fallback');

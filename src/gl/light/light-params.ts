@@ -29,7 +29,3 @@ export function resolveLightParams(input: LightInput): LightParams {
   const radius = parse(input.radius, BOUNDS.radius) ?? LIGHT_DEFAULTS.radius;
   return min <= max ? { min, max, radius } : { ...LIGHT_DEFAULTS, radius };
 }
-
-/** Human-readable summary for the lab page. */
-export const describeLightParams = ({ min, max, radius }: LightParams): string =>
-  `min ${min} · max ${max} · raio ${radius}`;
