@@ -55,10 +55,17 @@ test('back navigation works and leaves the ink uncovered', async ({ page }) => {
 
 test('rapid successive navigations do not leave the ink stuck', async ({ page }) => {
   await page.goto('/lab/tinta-a/');
+  await watchInk(page);
   await page.getByRole('link', { name: 'Ir para tinta B' }).click({ noWaitAfter: true });
   await page.getByRole('link', { name: 'Ir para luz' }).click({ noWaitAfter: true });
   await expect(page).toHaveURL(/\/lab\/(luz|tinta-b)\/$/);
+  await page.waitForLoadState();
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 3_000 });
+  await page.waitForTimeout(700);
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle');
+  const log = await inkLog(page);
+  expect(log).toContain('covering');
+  expect(log.at(-1)).toBe('idle');
 });
 
 test('keyboard navigation announces the new page', async ({ page }) => {
