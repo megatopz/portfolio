@@ -1,0 +1,23 @@
+---
+import eu from '../../assets/photos/eu.jpg';
+import HeroLight from '../../components/HeroLight.astro';
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Lab · Luz" description="Protótipo do efeito de luz" noindex surface="ink">
+  <section class="lab">
+    <p class="label">Lab · Luz</p>
+    <HeroLight src={eu} alt="Retrato de Gonçalo Guerra a preto e branco, em contraluz." />
+  </section>
+</Base>
+
+<style>
+  .lab {
+    display: grid;
+    gap: var(--space-6);
+    padding: var(--space-8);
+  }
+  .lab :global(.hero-light) {
+    height: min(80vh, 60rem);
+  }
+</style>
