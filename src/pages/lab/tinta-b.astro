@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Lab · Tinta B" description="Protótipo da transição de tinta" noindex surface="ink">
+  <section class="lab">
+    <p class="label">Lab · Tinta B</p>
+    <h1>Tinta B</h1>
+    <p>
+      <a href="/lab/tinta-a/">Ir para tinta A</a>
+    </p>
+    <p>
+      <a href="/lab/luz/">Ir para luz</a>
+    </p>
+  </section>
+</Base>
+
+<style>
+  .lab {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-8);
+  }
+</style>

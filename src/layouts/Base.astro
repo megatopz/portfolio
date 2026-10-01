@@ -6,6 +6,7 @@ import '../styles/reset.css';
 import '../styles/tokens.css';
 import '../styles/base.css';
 import { ClientRouter } from 'astro:transitions';
+import InkTransition from '../components/InkTransition.astro';
 import { defaultLocale, locales, type Locale } from '../i18n/config';
 import { alternatePath } from '../i18n/routes';
 import { t } from '../i18n/ui';
@@ -60,5 +61,6 @@ const alternates = locale
     <main id="main" tabindex="-1">
       <slot />
     </main>
+    <InkTransition />
   </body>
 </html>

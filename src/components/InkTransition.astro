@@ -1,0 +1,53 @@
+<canvas class="ink" data-ink data-state="idle" aria-hidden="true" transition:persist="ink-overlay"></canvas>
+
+<style>
+  .ink {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1000;
+  }
+</style>
+
+<script>
+  import type { TransitionBeforePreparationEvent } from 'astro:transitions/client';
+  import type { InkOverlay } from '../gl/ink/ink-overlay';
+  import { createMotionPrefs, supportsWebGL } from '../motion/prefs';
+
+  const COVER_MS = 250;
+  const UNCOVER_MS = 250;
+  const prefs = createMotionPrefs(window);
+  let overlay: Promise<InkOverlay | null> | null = null;
+  let direction: 1 | -1 = 1;
+
+  function getOverlay(): Promise<InkOverlay | null> {
+    overlay ??= (async () => {
+      const canvas = document.querySelector<HTMLCanvasElement>('[data-ink]');
+      if (canvas === null || !supportsWebGL(document)) return null;
+      const { createInkOverlay } = await import('../gl/ink/ink-overlay');
+      return createInkOverlay(canvas);
+    })().catch(() => null);
+    return overlay;
+  }
+
+  document.addEventListener('astro:before-preparation', (event) => {
+    const prep = event as TransitionBeforePreparationEvent;
+    if (prefs.reduced()) return;
+    direction = prep.direction === 'back' ? -1 : 1;
+    const originalLoader = prep.loader;
+    prep.signal.addEventListener('abort', () => {
+      void getOverlay().then((ink) => ink?.play(0, direction, UNCOVER_MS));
+    });
+    prep.loader = async () => {
+      const ink = await getOverlay();
+      await Promise.all([originalLoader(), ink?.play(1, direction, COVER_MS)]);
+    };
+  });
+
+  document.addEventListener('astro:after-swap', () => {
+    if (prefs.reduced()) return;
+    void getOverlay().then((ink) => ink?.play(0, direction, UNCOVER_MS));
+  });
+</script>
