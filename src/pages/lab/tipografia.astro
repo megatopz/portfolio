@@ -1,0 +1,75 @@
+---
+import '@fontsource-variable/bricolage-grotesque/index.css';
+import Base from '../../layouts/Base.astro';
+
+const samples = [
+  'Gonçalo Guerra',
+  'Desenho e construo produtos digitais, do primeiro esboço ao deploy.',
+  'I design and build digital products, from first sketch to deploy.',
+  'Don Gonçalo — da cozinha ao código',
+];
+const candidates = [
+  { name: 'Archivo · largura 62%', family: "'Archivo Variable', sans-serif", stretch: '62%', weight: 800 },
+  { name: 'Archivo · largura 100%', family: "'Archivo Variable', sans-serif", stretch: '100%', weight: 800 },
+  { name: 'Archivo · largura 125%', family: "'Archivo Variable', sans-serif", stretch: '125%', weight: 700 },
+  {
+    name: 'Bricolage Grotesque',
+    family: "'Bricolage Grotesque Variable', sans-serif",
+    stretch: '100%',
+    weight: 800,
+  },
+];
+---
+
+<Base title="Lab · Tipografia" description="Especímenes tipográficos para escolha da fonte display" noindex>
+  <div class="specimens">
+    {candidates.map((c) => (
+      <section
+        class="specimen"
+        style={`--family: ${c.family}; --stretch: ${c.stretch}; --weight: ${c.weight};`}
+      >
+        <h2 class="label">{c.name}</h2>
+        <p class="hero">{samples[0]}</p>
+        {samples.slice(1).map((s) => (
+          <p class="title">{s}</p>
+        ))}
+        <p class="body">
+          Trabalhei no Don Gonçalo como empregado de mesa, ajudante de cozinha e pizzaiolo, e depois construí
+          a plataforma do restaurante.
+        </p>
+      </section>
+    ))}
+  </div>
+</Base>
+
+<style>
+  .specimens {
+    display: grid;
+    gap: var(--space-16);
+    padding: var(--space-8);
+  }
+  .specimen {
+    display: grid;
+    gap: var(--space-4);
+    border-top: var(--rule-width) solid var(--rule);
+    padding-top: var(--space-6);
+  }
+  .hero,
+  .title {
+    font-family: var(--family);
+    font-stretch: var(--stretch);
+    font-weight: var(--weight);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .hero {
+    font-size: var(--step-hero);
+  }
+  .title {
+    font-size: var(--step-3);
+    max-width: 24ch;
+  }
+  .body {
+    max-width: var(--measure);
+  }
+</style>

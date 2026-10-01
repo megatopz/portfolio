@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const pages = ['/pt/', '/en/', '/nao-existe/'];
+const pages = ['/pt/', '/en/', '/nao-existe/', '/lab/tipografia/'];
 
 for (const path of pages) {
   test(`${path} has no WCAG 2.2 AA violations`, async ({ page }) => {
@@ -21,4 +21,13 @@ test('skip link is the first focus stop and moves focus to main', async ({ page 
   await expect(skip).toBeInViewport();
   await page.keyboard.press('Enter');
   await expect(page.locator('main#main')).toBeFocused();
+});
+
+test('lab pages are not indexed and are excluded from the sitemap', async ({ page, request }) => {
+  await page.goto('/lab/tipografia/');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
+  const sitemap = await (await request.get('/sitemap-0.xml')).text();
+  expect(sitemap).not.toContain('/lab/');
+  expect(sitemap).toContain('/pt/');
+  expect(sitemap).toContain('/en/');
 });
