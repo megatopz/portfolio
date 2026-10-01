@@ -1,5 +1,6 @@
 import { toUv } from '../../motion/math';
 import { createMotionPrefs, supportsWebGL } from '../../motion/prefs';
+import { createTiltControl, type TiltControl, type TiltHost } from '../../motion/tilt-control';
 import type { LightScene } from './light-scene';
 
 export type HeroLightState = 'idle' | 'running' | 'paused' | 'fallback' | 'off';
@@ -35,18 +36,30 @@ export function mountHeroLight(root: HTMLElement): () => void {
   let visible = true;
   let disposed = false;
 
+  // Without a fine pointer (phones), tilting the phone steers the light; until then it drifts.
+  const tilt: TiltControl | null = finePointer
+    ? null
+    : createTiltControl(window as unknown as TiltHost, (uv) => {
+        scene?.setPointer(uv);
+        if (uv === null) delete root.dataset.tilt;
+        else root.dataset.tilt = 'on';
+      });
+
   const syncRunning = () => {
     if (scene === null) return;
     if (visible && document.visibilityState === 'visible') {
       scene.start();
+      tilt?.start();
       setState('running');
     } else {
+      tilt?.stop();
       scene.stop();
       setState('paused');
     }
   };
 
   const teardownScene = () => {
+    tilt?.stop();
     scene?.destroy();
     scene = null;
   };
@@ -54,6 +67,10 @@ export function mountHeroLight(root: HTMLElement): () => void {
   const onPointerMove = (event: PointerEvent) =>
     scene?.setPointer(toUv(event.clientX, event.clientY, canvas.getBoundingClientRect()));
   const onPointerLeave = () => scene?.setPointer(null);
+  // iOS asks for motion permission only from a gesture: the first tap on the photo, once.
+  const onTap = () => {
+    if (scene !== null && tilt?.needsGesture()) void tilt.requestFromGesture();
+  };
   const onVisibility = () => syncRunning();
   const intersection = new IntersectionObserver(([entry]) => {
     visible = entry?.isIntersecting ?? false;
@@ -100,6 +117,8 @@ export function mountHeroLight(root: HTMLElement): () => void {
   if (finePointer) {
     root.addEventListener('pointermove', onPointerMove);
     root.addEventListener('pointerleave', onPointerLeave);
+  } else if (tilt?.needsGesture()) {
+    root.addEventListener('click', onTap);
   }
   document.addEventListener('visibilitychange', onVisibility);
   intersection.observe(root);
@@ -122,5 +141,6 @@ export function mountHeroLight(root: HTMLElement): () => void {
     document.removeEventListener('visibilitychange', onVisibility);
     root.removeEventListener('pointermove', onPointerMove);
     root.removeEventListener('pointerleave', onPointerLeave);
+    root.removeEventListener('click', onTap);
   };
 }

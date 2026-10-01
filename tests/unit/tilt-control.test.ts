@@ -123,19 +123,42 @@ describe('createTiltControl without a permission API (Android)', () => {
   });
 });
 
-describe('createTiltControl with a permission API (iPhone)', () => {
-  it('does not subscribe until permission is granted from a gesture', async () => {
+describe('createTiltControl with a permission API', () => {
+  it('steers without a tap when readings flow anyway (Chrome exposes requestPermission too)', () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control, seen } = setup(fake);
+    control.start();
+    expect(fake.listeners()).toBe(1);
+    fake.emit({ beta: 30, gamma: 0 });
+    expect(seen).toEqual([{ x: 0.5, y: 0.5 }]);
+    expect(control.needsGesture()).toBe(false);
+    expect(fake.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('on iPhone stays silent until permission is granted from a tap, then steers', async () => {
     const fake = fakeHost({ api: 'granted' });
     const { control, seen } = setup(fake);
     control.start();
     expect(control.needsGesture()).toBe(true);
+    vi.advanceTimersByTime(1_100);
     expect(fake.listeners()).toBe(0);
+    expect(control.needsGesture()).toBe(true);
     await control.requestFromGesture();
     expect(fake.requestPermission).toHaveBeenCalledOnce();
     expect(control.needsGesture()).toBe(false);
     expect(fake.listeners()).toBe(1);
     fake.emit({ beta: 30, gamma: 0 });
     expect(seen).toEqual([{ x: 0.5, y: 0.5 }]);
+  });
+
+  it('restarts the silence window when permission is granted while still listening', async () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control } = setup(fake);
+    control.start();
+    vi.advanceTimersByTime(800);
+    await control.requestFromGesture();
+    vi.advanceTimersByTime(800);
+    expect(fake.listeners()).toBe(1);
   });
 
   it('calls requestPermission synchronously inside the gesture handler', () => {

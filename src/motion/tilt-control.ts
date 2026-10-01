@@ -31,7 +31,8 @@ const SILENCE_MS = 1000;
 
 /**
  * Phone tilt as a light source. `onTilt` receives the target UV for each reading, or null when
- * tilt stops steering (stop, or the sensor stays silent).
+ * tilt stops steering. It listens as soon as it starts; when a requestPermission API exists and no
+ * reading arrives (iOS before a grant), `needsGesture()` stays true so a tap can ask, once.
  */
 export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => void): TiltControl {
   const api = host.DeviceOrientationEvent;
@@ -53,6 +54,8 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
     const { beta, gamma } = event;
     if (beta === null || gamma === null || !Number.isFinite(beta) || !Number.isFinite(gamma)) return;
     clearTimeout(silence);
+    // Readings without a prompt (Chrome also exposes requestPermission): nothing to ask for.
+    if (permission === 'ask') permission = 'granted';
     // Recalibrate when the screen turns: the way the phone is held changes with it.
     if (reference === null || angle() !== referenceAngle) {
       reference = { beta, gamma };
@@ -71,7 +74,8 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
   };
 
   const subscribe = () => {
-    if (listening || !wanted || permission !== 'granted') return;
+    // Listen even before an iOS grant: no readings arrive until then, and the silence timer gives up.
+    if (listening || !wanted || permission === 'none' || permission === 'denied') return;
     listening = true;
     reference = null;
     host.addEventListener('deviceorientation', onReading);
@@ -97,10 +101,13 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
       return api.requestPermission().then(
         (result) => {
           permission = result === 'granted' ? 'granted' : 'denied';
+          // Resubscribe so a granted sensor gets a fresh silence window; a denial just stops.
+          unsubscribe();
           subscribe();
         },
         () => {
           permission = 'denied';
+          unsubscribe();
         },
       );
     },

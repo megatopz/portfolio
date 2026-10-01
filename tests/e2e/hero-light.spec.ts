@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 
 const hero = (page: Page) => page.locator('[data-hero-light]');
 
@@ -130,5 +130,45 @@ test.describe('lab light tuning', () => {
     await page.goto('/lab/luz/?min=1.4&max=0.9');
     await expect(hero(page)).toHaveAttribute('data-light-min', '0.75');
     await expect(hero(page)).toHaveAttribute('data-light-max', '1.35');
+  });
+});
+
+test.describe('on a phone', () => {
+  const { viewport, userAgent, deviceScaleFactor } = devices['Pixel 7'];
+  test.use({ viewport, userAgent, deviceScaleFactor, isMobile: true, hasTouch: true });
+
+  test('has no fine pointer, so tilt is the light source', async ({ page }) => {
+    await page.goto('/lab/luz/');
+    expect(await page.evaluate(() => matchMedia('(pointer: fine)').matches)).toBe(false);
+  });
+
+  test('tilting the phone steers the light and the effect keeps running', async ({ page }) => {
+    // A fake sensor: a reading every 50 ms, swinging gamma ±40° around a 40° hold.
+    await page.addInitScript(() => {
+      let t = 0;
+      setInterval(() => {
+        t += 0.05;
+        const reading = { alpha: 0, beta: 40 + 20 * Math.sin(t * 2), gamma: 40 * Math.sin(t * 3) };
+        window.dispatchEvent(new DeviceOrientationEvent('deviceorientation', reading));
+      }, 50);
+    });
+    await page.goto('/lab/luz/');
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+    await expect(hero(page)).toHaveAttribute('data-tilt', 'on');
+    await page.waitForTimeout(1_500);
+    await expect(hero(page)).toHaveAttribute('data-state', 'running');
+    await expect(hero(page)).toHaveAttribute('data-tilt', 'on');
+    // Reduced motion tears the scene down and removes the sensor listener with it.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(hero(page)).toHaveAttribute('data-state', 'off');
+    await expect(hero(page)).not.toHaveAttribute('data-tilt');
+  });
+
+  test('keeps drifting when the sensor stays silent', async ({ page }) => {
+    await page.goto('/lab/luz/');
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+    await page.waitForTimeout(1_500);
+    await expect(hero(page)).toHaveAttribute('data-state', 'running');
+    await expect(hero(page)).not.toHaveAttribute('data-tilt');
   });
 });
