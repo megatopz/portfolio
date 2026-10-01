@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const ink = '[data-ink]';
+/** Cold navigations on the CI runner (SwiftShader, shared CPU) can take several seconds to settle. */
+const IDLE_TIMEOUT = process.env.CI ? 5_000 : 3_000;
+/** Local performance promise; the CI runner gets headroom because software WebGL is much slower. */
+const TRANSITION_LIMIT = process.env.CI ? 3_000 : 1_500;
 
 type InkWindow = { inkLog?: string[] };
 
@@ -31,7 +35,7 @@ test('navigates between pages and the ink ends uncovered', async ({ page }) => {
   await page.getByRole('link', { name: 'Ir para tinta B' }).click();
   await expect(page).toHaveURL(/\/lab\/tinta-b\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tinta B');
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   expect(await inkLog(page)).toEqual(FULL_CYCLE);
 });
 
@@ -45,11 +49,11 @@ test('back navigation works and leaves the ink uncovered', async ({ page }) => {
   await page.goto('/lab/tinta-a/');
   await page.getByRole('link', { name: 'Ir para tinta B' }).click();
   await expect(page).toHaveURL(/tinta-b/);
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   await watchInk(page);
   await page.goBack();
   await expect(page).toHaveURL(/tinta-a/);
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   expect(await inkLog(page)).toEqual(FULL_CYCLE);
 });
 
@@ -60,7 +64,7 @@ test('rapid successive navigations do not leave the ink stuck', async ({ page })
   await page.getByRole('link', { name: 'Ir para luz' }).click({ noWaitAfter: true });
   await expect(page).toHaveURL(/\/lab\/(luz|tinta-b)\/$/);
   await page.waitForLoadState();
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 3_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   await page.waitForTimeout(700);
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle');
   const log = await inkLog(page);
@@ -82,15 +86,34 @@ test('the whole transition completes within 1.5 s locally', async ({ page }) => 
   // compilation (SwiftShader, 6 parallel workers), which made the cold timing flaky (1.5-1.6 s).
   await page.getByRole('link', { name: 'Ir para tinta B' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tinta B');
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   await page.getByRole('link', { name: 'Ir para tinta A' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tinta A');
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
-  const started = Date.now();
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
+  // Timed inside the page, from Astro starting the navigation to the overlay back at rest, so
+  // Playwright's own round trips do not count.
+  await page.evaluate(() => {
+    const w = window as unknown as { inkTiming?: { start?: number; end?: number } };
+    const timing: { start?: number; end?: number } = {};
+    w.inkTiming = timing;
+    document.addEventListener('astro:before-preparation', () => (timing.start ??= performance.now()), {
+      once: true,
+    });
+    const canvas = document.querySelector('[data-ink]');
+    if (!canvas) return;
+    new MutationObserver(() => {
+      if (timing.start !== undefined && canvas.getAttribute('data-state') === 'idle')
+        timing.end ??= performance.now();
+    }).observe(canvas, { attributes: true, attributeFilter: ['data-state'] });
+  });
   await page.getByRole('link', { name: 'Ir para tinta B' }).click();
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tinta B');
-  expect(Date.now() - started).toBeLessThan(1_500);
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
+  const elapsed = await page.evaluate(() => {
+    const { start, end } = (window as unknown as { inkTiming: { start?: number; end?: number } }).inkTiming;
+    return start !== undefined && end !== undefined ? end - start : Number.POSITIVE_INFINITY;
+  });
+  expect(elapsed).toBeLessThan(TRANSITION_LIMIT);
 });
 
 test.describe('with reduced motion', () => {
@@ -138,7 +161,7 @@ test('a link to a non-HTML file leaves the page uncovered', async ({ page }) => 
   await page.getByRole('link', { name: 'Ficheiro' }).click();
   await download;
   await expect(page).toHaveURL(/\/lab\/tinta-a\/$/);
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
   await page.waitForTimeout(500);
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle');
 });
@@ -150,7 +173,7 @@ test('a page restored from the back/forward cache is never left covered', async 
   await page.getByRole('link', { name: 'Ir para tinta B' }).click({ noWaitAfter: true });
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'covered', { timeout: 5_000 });
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 1_000 });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
 });
 
 test('a fresh page load does not uncover a navigation in progress', async ({ page }) => {

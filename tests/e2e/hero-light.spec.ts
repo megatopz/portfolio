@@ -107,10 +107,27 @@ test('a preference change while the effect is starting never creates a second sc
       return original.call(this, type, ...rest);
     };
   });
-  await page.goto('/lab/luz/', { waitUntil: 'domcontentloaded' });
-  // Off then on again before the idle start has finished: both paths call start().
+  // Hold the texture so createScene is certainly still in flight while the preference flips,
+  // instead of racing the idle start (which made this test timing-dependent on slow runners).
+  const html = await (await page.request.get('/lab/luz/')).text();
+  const textureUrl = /data-texture="([^"]+)"/.exec(html)?.[1];
+  expect(textureUrl).toBeTruthy();
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let requested = () => {};
+  const inFlight = new Promise<void>((resolve) => (requested = resolve));
+  await page.route(`**${textureUrl}`, async (route) => {
+    requested();
+    await held;
+    await route.continue();
+  });
+  await page.goto('/lab/luz/', { waitUntil: 'load' });
+  await inFlight;
+  // Off then on again while the first start is pending: both paths call start().
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(hero(page)).toHaveAttribute('data-state', 'off');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  release();
   await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
   await page.waitForTimeout(1_000);
   expect(await page.evaluate(() => (window as unknown as { heroContexts: number }).heroContexts)).toBe(1);
