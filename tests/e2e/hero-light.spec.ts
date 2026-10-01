@@ -115,3 +115,20 @@ test('a preference change while the effect is starting never creates a second sc
   await page.waitForTimeout(1_000);
   expect(await page.evaluate(() => (window as unknown as { heroContexts: number }).heroContexts)).toBe(1);
 });
+
+test.describe('lab light tuning', () => {
+  test('applies valid URL values and ignores invalid or out-of-range ones', async ({ page }) => {
+    await page.goto('/lab/luz/?min=0.5&max=abc&radius=9');
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+    await expect(hero(page)).toHaveAttribute('data-light-min', '0.5');
+    await expect(hero(page)).toHaveAttribute('data-light-max', '1.35');
+    await expect(hero(page)).toHaveAttribute('data-light-radius', '0.65');
+    await expect(page.locator('[data-light-values]')).toHaveText('min 0.5 · max 1.35 · raio 0.65');
+  });
+
+  test('drops brightness values where the edge would outshine the centre', async ({ page }) => {
+    await page.goto('/lab/luz/?min=1.4&max=0.9');
+    await expect(hero(page)).toHaveAttribute('data-light-min', '0.75');
+    await expect(hero(page)).toHaveAttribute('data-light-max', '1.35');
+  });
+});

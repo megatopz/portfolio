@@ -1,11 +1,12 @@
 ---
 import eu from '../../assets/photos/eu.jpg';
 import HeroLight from '../../components/HeroLight.astro';
+import { describeLightParams, LIGHT_DEFAULTS } from '../../gl/light/light-params';
 import Base from '../../layouts/Base.astro';
 ---
 
 <Base title="Lab · Luz" description="Protótipo do efeito de luz" noindex surface="ink">
-  <section class="lab">
+  <section class="lab" data-light-lab>
     <p class="label">Lab · Luz</p>
     {/* The hero spans the .lab content box: 100vw minus var(--space-8) padding on each side. */}
     <HeroLight
@@ -13,6 +14,9 @@ import Base from '../../layouts/Base.astro';
       alt="Retrato de Gonçalo Guerra a preto e branco, em contraluz."
       sizes="calc(100vw - 4rem)"
     />
+    <p class="label" data-light-values>
+      {describeLightParams(LIGHT_DEFAULTS)}
+    </p>
     <p>
       <a href="/lab/tinta-a/">Ir para tinta A</a>
     </p>
@@ -29,3 +33,27 @@ import Base from '../../layouts/Base.astro';
     height: min(80vh, 60rem);
   }
 </style>
+
+<script>
+  import { describeLightParams, resolveLightParams } from '../../gl/light/light-params';
+
+  // Only this lab page reads ?min&max&radius, to try values without a rebuild. The shared HeroLight
+  // has no URL code: elsewhere it always uses the defaults fixed in light-params.ts.
+  document.addEventListener('astro:page-load', () => {
+    const lab = document.querySelector<HTMLElement>('[data-light-lab]');
+    const hero = lab?.querySelector<HTMLElement>('[data-hero-light]');
+    if (!lab || !hero) return;
+    const query = new URLSearchParams(window.location.search);
+    const light = resolveLightParams({
+      min: query.get('min') ?? undefined,
+      max: query.get('max') ?? undefined,
+      radius: query.get('radius') ?? undefined,
+    });
+    // mountHeroLight reads these when the scene starts (on idle, after this handler).
+    hero.dataset.lightMin = String(light.min);
+    hero.dataset.lightMax = String(light.max);
+    hero.dataset.lightRadius = String(light.radius);
+    const values = lab.querySelector('[data-light-values]');
+    if (values) values.textContent = describeLightParams(light);
+  });
+</script>

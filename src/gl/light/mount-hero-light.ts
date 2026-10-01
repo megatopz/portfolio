@@ -72,6 +72,8 @@ export function mountHeroLight(root: HTMLElement): () => void {
       scene = createLightScene({
         canvas,
         image,
+        // Read late so a page (only /lab/luz/) can tune these before the idle start; unset → defaults.
+        light: { min: root.dataset.lightMin, max: root.dataset.lightMax, radius: root.dataset.lightRadius },
         onContextLost: () => {
           teardownScene();
           setState('fallback');
