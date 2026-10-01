@@ -7,7 +7,12 @@ import Base from '../../layouts/Base.astro';
 <Base title="Lab · Luz" description="Protótipo do efeito de luz" noindex surface="ink">
   <section class="lab">
     <p class="label">Lab · Luz</p>
-    <HeroLight src={eu} alt="Retrato de Gonçalo Guerra a preto e branco, em contraluz." />
+    {/* The hero spans the .lab content box: 100vw minus var(--space-8) padding on each side. */}
+    <HeroLight
+      src={eu}
+      alt="Retrato de Gonçalo Guerra a preto e branco, em contraluz."
+      sizes="calc(100vw - 4rem)"
+    />
     <p>
       <a href="/lab/tinta-a/">Ir para tinta A</a>
     </p>

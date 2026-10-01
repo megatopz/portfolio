@@ -5,9 +5,11 @@ import { getImage, Picture } from 'astro:assets';
 interface Props {
   src: ImageMetadata;
   alt: string;
+  /** Rendered width of the hero; the page sets it because only the page knows its layout. */
+  sizes?: string;
 }
 
-const { src, alt } = Astro.props;
+const { src, alt, sizes = '100vw' } = Astro.props;
 const texture = await getImage({ src, width: 1280, format: 'webp' });
 ---
 
@@ -16,7 +18,7 @@ const texture = await getImage({ src, width: 1280, format: 'webp' });
     src={src}
     alt={alt}
     widths={[640, 960, 1280]}
-    sizes="(min-width: 60rem) 60vw, calc(100vw - 4rem)"
+    sizes={sizes}
     formats={['avif', 'webp']}
     loading="eager"
     fetchpriority="high"
