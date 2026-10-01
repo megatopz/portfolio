@@ -64,8 +64,9 @@
       const cover = ink?.play(1, direction, COVER_MS);
       await load;
       // Not HTML (e.g. a file download): Astro falls back to location.href and may stay on this
-      // page, so never leave it covered.
-      if (prep.defaultPrevented) return uncoverNow();
+      // page, so never leave it covered. An aborted fetch also prevents default, but then a newer
+      // navigation owns the ink and the abort listener handles this one.
+      if (prep.defaultPrevented && !prep.signal.aborted) return uncoverNow();
       await cover;
     };
   });
