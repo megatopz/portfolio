@@ -60,7 +60,7 @@ export function mountHeroLight(root: HTMLElement): () => void {
     syncRunning();
   });
 
-  const start = async () => {
+  const createScene = async () => {
     if (prefs.reduced()) return setState('off');
     if (!supportsWebGL(document)) return setState('fallback');
     try {
@@ -82,6 +82,17 @@ export function mountHeroLight(root: HTMLElement): () => void {
       teardownScene();
       setState('fallback');
     }
+  };
+
+  // One start at a time: a prefs change during the idle wait or the lazy import must not create
+  // a second scene on the same canvas.
+  let starting: Promise<void> | null = null;
+  const start = (): Promise<void> => {
+    if (disposed || scene !== null) return Promise.resolve();
+    starting ??= createScene().finally(() => {
+      starting = null;
+    });
+    return starting;
   };
 
   if (finePointer) {
