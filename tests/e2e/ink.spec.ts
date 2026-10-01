@@ -113,3 +113,52 @@ test.describe('with reduced motion', () => {
     expect(states.filter((s) => s !== 'idle')).toEqual([]);
   });
 });
+
+test('a link to a non-HTML file leaves the page uncovered', async ({ page }) => {
+  // Astro fetches the target, sees it is not HTML and falls back to location.href, which
+  // downloads the file and keeps the current page on screen.
+  await page.route('**/lab/ficheiro.bin', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/octet-stream',
+      headers: { 'content-disposition': 'attachment; filename="ficheiro.bin"' },
+      body: 'x',
+    }),
+  );
+  await page.goto('/lab/tinta-a/');
+  await page.evaluate(() => {
+    const link = Object.assign(document.createElement('a'), {
+      href: '/lab/ficheiro.bin',
+      textContent: 'Ficheiro',
+    });
+    document.querySelector('.lab')?.append(link);
+  });
+  await watchInk(page);
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Ficheiro' }).click();
+  await download;
+  await expect(page).toHaveURL(/\/lab\/tinta-a\/$/);
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 2_000 });
+  await page.waitForTimeout(500);
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle');
+});
+
+test('a page restored from the back/forward cache is never left covered', async ({ page }) => {
+  await page.goto('/lab/tinta-a/');
+  // Hold the next page so the ink stays covered, as when the page was frozen mid-navigation.
+  await page.route('**/lab/tinta-b/', () => {});
+  await page.getByRole('link', { name: 'Ir para tinta B' }).click({ noWaitAfter: true });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'covered', { timeout: 5_000 });
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: 1_000 });
+});
+
+test('a fresh page load does not uncover a navigation in progress', async ({ page }) => {
+  await page.goto('/lab/tinta-a/');
+  await page.route('**/lab/tinta-b/', () => {});
+  await page.getByRole('link', { name: 'Ir para tinta B' }).click({ noWaitAfter: true });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'covered', { timeout: 5_000 });
+  await page.evaluate(() => document.dispatchEvent(new Event('astro:page-load')));
+  await page.waitForTimeout(300);
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'covered');
+});

@@ -32,24 +32,58 @@
     return overlay;
   }
 
+  /** True while a navigation we cover is between preparation and swap. */
+  let navigating = false;
+
+  /** Uncovers at once without creating the overlay if it never existed. */
+  function uncoverNow() {
+    navigating = false;
+    void overlay?.then((ink) => ink?.play(0, direction, 0));
+  }
+
+  const inkState = () => document.querySelector<HTMLElement>('[data-ink]')?.dataset.state ?? 'idle';
+
   document.addEventListener('astro:before-preparation', (event) => {
     const prep = event as TransitionBeforePreparationEvent;
     if (prefs.reduced()) return;
+    navigating = true;
     direction = prep.direction === 'back' ? -1 : 1;
     const originalLoader = prep.loader;
-    prep.signal.addEventListener('abort', () => {
-      void getOverlay().then((ink) => ink?.play(0, direction, UNCOVER_MS));
-    });
+    prep.signal.addEventListener(
+      'abort',
+      () => {
+        navigating = false;
+        void getOverlay().then((ink) => ink?.play(0, direction, UNCOVER_MS));
+      },
+      { once: true },
+    );
     prep.loader = async () => {
       // Start the page fetch first so the overlay's lazy import never delays it.
       const load = originalLoader();
       const ink = await getOverlay();
-      await Promise.all([load, ink?.play(1, direction, COVER_MS)]);
+      const cover = ink?.play(1, direction, COVER_MS);
+      await load;
+      // Not HTML (e.g. a file download): Astro falls back to location.href and may stay on this
+      // page, so never leave it covered.
+      if (prep.defaultPrevented) return uncoverNow();
+      await cover;
     };
   });
 
   document.addEventListener('astro:after-swap', () => {
+    navigating = false;
     if (prefs.reduced()) return;
     void getOverlay().then((ink) => ink?.play(0, direction, UNCOVER_MS));
+  });
+
+  // Recovery: a page restored from the back/forward cache may have been frozen mid-cover, and a
+  // page load with no navigation in flight must never stay covered ('uncovering' is the normal
+  // post-swap animation, so it is left alone).
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && inkState() !== 'idle') uncoverNow();
+  });
+  document.addEventListener('astro:page-load', () => {
+    const state = inkState();
+    if (!navigating && (state === 'covering' || state === 'covered')) uncoverNow();
   });
 </script>
