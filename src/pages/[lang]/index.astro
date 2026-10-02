@@ -5,7 +5,7 @@ import { locales, type Locale } from '../../i18n/config';
 import { copy } from '../../i18n/copy';
 import { pathFor } from '../../i18n/routes';
 import { t } from '../../i18n/ui';
-import { getWork } from '../../i18n/work';
+import { getWork, workSlug } from '../../i18n/work';
 import Page from '../../layouts/Page.astro';
 
 export function getStaticPaths() {
@@ -14,7 +14,7 @@ export function getStaticPaths() {
 
 const locale = Astro.params.lang as Locale;
 const text = copy[locale].home;
-const [featured] = await getWork(locale);
+const featured = (await getWork(locale)).find((entry) => workSlug(entry) === 'don-goncalo');
 ---
 
 <Page
