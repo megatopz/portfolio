@@ -1,7 +1,7 @@
 /**
  * Per-axis multipliers that turn UV offsets into light-distance units, normalised by the canvas's
  * SHORTER side. Landscape: [w/h, 1] (distance in heights, as before). Portrait: [1, h/w] (in widths).
- * Mirrors `lightScale` in light-shaders.ts.
+ * Mirrors `aspect` in light-shaders.ts.
  */
 export function lightSpaceScale(width: number, height: number): [number, number] {
   const shorter = Math.min(width, height);
