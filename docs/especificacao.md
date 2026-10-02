@@ -253,8 +253,8 @@ As decisões marcadas como bloqueantes têm de estar fechadas antes da fase indi
 
 - [ ] Domínio do portfolio (ex.: nome próprio em `.com` ou `.pt`) — antes da fase 5
 - [ ] Nome de utilizador do GitHub e repositório público do portfolio — antes da fase 1
-- [ ] Títulos, mensagem central e texto do About (os desta especificação são rascunhos) — antes da fase 3
-- [ ] Redes a mostrar: LinkedIn e GitHub sim; Instagram e Facebook a decidir — antes da fase 3
+- [x] Títulos, mensagem central e texto do About (os desta especificação são rascunhos) — antes da fase 3 — decidido a 2026-10-02, ver decisoes.md
+- [x] Redes a mostrar: LinkedIn e GitHub sim; Instagram e Facebook a decidir — antes da fase 3 — decidido a 2026-10-02, ver decisoes.md
 - [ ] Como referir o desenvolvimento com apoio de IA no case study e no colofão — antes da fase 4
 - [ ] Confirmar no código: SameSite dos cookies, limites de rate limiting, uso de `packages/`, formato da referência — antes da fase 4
 - [ ] Licenças de fontes e imagens do DonGonçalo, com o cliente — bloqueante para publicar o case study
