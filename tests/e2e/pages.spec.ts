@@ -50,3 +50,40 @@ test('copy email puts the address on the clipboard and announces it', async ({ p
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('goncaloguerra100@gmail.com');
   await expect(button).toHaveText('Copiar email', { timeout: 3_000 });
 });
+
+for (const [locale, paths] of Object.entries(pages)) {
+  test(`${locale}: the header marks the current section`, async ({ page }) => {
+    for (const [key, path] of Object.entries(paths)) {
+      await page.goto(path);
+      const current = page.locator('.site-header [aria-current="page"]');
+      await expect(current).toHaveCount(1);
+      await expect(current).toHaveAttribute('href', key === 'home' ? paths.home : path);
+    }
+  });
+}
+
+test('work lists the projects in order with their status', async ({ page }) => {
+  await page.goto(pages.pt.work);
+  await expect(page.locator('.work-row h2')).toHaveText(['Don Gonçalo', 'Este site']);
+  await expect(page.locator('.work-row').first()).toContainText('Case study em preparação');
+  await page.goto(pages.en.work);
+  await expect(page.locator('.work-row h2')).toHaveText(['Don Gonçalo', 'This site']);
+});
+
+test('about shows the photo, the text, tools and languages', async ({ page }) => {
+  await page.goto(pages.en.about);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('About');
+  await expect(page.locator('.about__figure img')).toHaveAttribute('alt', /Gonçalo Guerra/);
+  await expect(page.getByText('running a CNC machine', { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tools' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Languages' })).toBeVisible();
+});
+
+test('the language switch keeps the section', async ({ page }) => {
+  await page.goto(pages.pt.about);
+  await page.locator('.lang-switch a[hreflang="en"]').click();
+  await expect(page).toHaveURL(/\/en\/about\/$/);
+  await page.goto(pages.en.work);
+  await page.locator('.lang-switch a[hreflang="pt"]').click();
+  await expect(page).toHaveURL(/\/pt\/trabalho\/$/);
+});

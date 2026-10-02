@@ -1,0 +1,265 @@
+---
+import { Picture } from 'astro:assets';
+import eu2 from '../../assets/photos/eu2.jpg';
+import { locales, type Locale } from '../../i18n/config';
+import { copy } from '../../i18n/copy';
+import { routes } from '../../i18n/routes';
+import { t } from '../../i18n/ui';
+import { getWork, workSlug } from '../../i18n/work';
+import Page from '../../layouts/Page.astro';
+
+// One file for the two section pages whose slug is translated (trabalho/work, sobre/about).
+export function getStaticPaths() {
+  return locales.flatMap((lang) =>
+    (['work', 'about'] as const).map((key) => ({
+      params: { lang, page: routes[key][lang] },
+      props: { key },
+    })),
+  );
+}
+
+const locale = Astro.params.lang as Locale;
+const { key } = Astro.props;
+const about = copy[locale].about;
+const work = key === 'work' ? await getWork(locale) : [];
+---
+
+{key === 'work' ? (
+  <Page
+    title={`${t(locale, 'work.title')} — Gonçalo Guerra`}
+    description={t(locale, 'work.description')}
+    locale={locale}
+    current="work"
+  >
+    <section class="wrap page-head" aria-labelledby="page-title">
+      <h1 id="page-title" class="page-title">
+        {t(locale, 'work.title')}
+      </h1>
+    </section>
+    <ol class="wrap work-index" role="list">
+      {work.map((entry, index) => (
+        <li class="work-row" id={workSlug(entry)}>
+          <span class="label work-row__index" aria-hidden="true">
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <h2 class="work-row__title">{entry.data.title}</h2>
+          <p class="work-row__summary">{entry.data.summary}</p>
+          <dl class="work-row__meta">
+            <div>
+              <dt class="label">{t(locale, 'work.year')}</dt>
+              <dd>{entry.data.year}</dd>
+            </div>
+            <div>
+              <dt class="label">{t(locale, 'work.disciplines')}</dt>
+              <dd>{entry.data.disciplines.join(' · ')}</dd>
+            </div>
+            <div>
+              <dt class="label">{t(locale, 'work.role')}</dt>
+              <dd>{entry.data.role}</dd>
+            </div>
+          </dl>
+          {entry.data.status === 'in-preparation' && (
+            <p class="label work-row__status">{t(locale, 'work.status.inPreparation')}</p>
+          )}
+        </li>
+      ))}
+    </ol>
+  </Page>
+) : (
+  <Page
+    title={`${about.title} — Gonçalo Guerra`}
+    description={t(locale, 'about.description')}
+    locale={locale}
+    current="about"
+  >
+    <div class="wrap about">
+      <figure class="about__figure">
+        <Picture
+          src={eu2}
+          alt={about.photoAlt}
+          widths={[480, 720, 960]}
+          sizes="(min-width: 64rem) 40vw, calc(100vw - 2rem)"
+          formats={['avif', 'webp']}
+          loading="eager"
+          class="about__photo"
+        />
+      </figure>
+      <div class="about__text">
+        <h1 id="page-title" class="page-title">
+          {about.title}
+        </h1>
+        {about.paragraphs.map((paragraph, index) => (
+          <p class={index === 0 ? 'about__intro' : 'about__paragraph'}>{paragraph}</p>
+        ))}
+        <h2 class="label about__subtitle">{about.toolsTitle}</h2>
+        <dl class="about__list">
+          {about.tools.map((group) => (
+            <div>
+              <dt class="label">{group.group}</dt>
+              <dd>{group.items.join(' · ')}</dd>
+            </div>
+          ))}
+        </dl>
+        <h2 class="label about__subtitle">{about.languagesTitle}</h2>
+        <dl class="about__list">
+          {about.languages.map((language) => (
+            <div>
+              <dt class="label">{language.name}</dt>
+              <dd>{language.level}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  </Page>
+)}
+
+<style>
+  .page-head {
+    padding-block: var(--space-16) var(--space-8);
+  }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 1rem + 9vw, 9rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+  }
+
+  .work-index {
+    margin-bottom: var(--space-24);
+    list-style: none;
+  }
+  .work-row {
+    display: grid;
+    gap: var(--space-3) var(--space-6);
+    padding-block: var(--space-8);
+    border-top: var(--rule-width) solid var(--fg);
+  }
+  .work-row:last-child {
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .work-row__index,
+  .work-row__status,
+  .work-row__meta dt {
+    color: var(--fg-muted);
+  }
+  .work-row__title {
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .work-row__summary {
+    max-width: 48ch;
+  }
+  .work-row__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-8);
+  }
+  .work-row__meta dd {
+    margin: 0;
+  }
+  @media (min-width: 64rem) {
+    .work-row {
+      grid-template-columns: repeat(12, 1fr);
+      align-items: baseline;
+    }
+    .work-row__index {
+      grid-column: 1;
+    }
+    .work-row__title {
+      grid-column: 2 / span 4;
+    }
+    .work-row__summary {
+      grid-column: 6 / span 4;
+    }
+    .work-row__meta {
+      grid-column: 6 / span 7;
+      grid-row: 2;
+    }
+    .work-row__status {
+      grid-column: 10 / -1;
+      grid-row: 1;
+      text-align: right;
+    }
+  }
+
+  .about {
+    display: grid;
+    gap: var(--space-8);
+    padding-block: var(--space-12) var(--space-24);
+  }
+  /* The figure is the grid item; <picture> and <img> fill it. */
+  .about__figure :global(picture) {
+    display: block;
+  }
+  .about__figure :global(.about__photo) {
+    width: 100%;
+    /* height: auto overrides the height attribute Astro writes, so aspect-ratio applies. */
+    height: auto;
+    /* Square on small screens so the (dark) photo does not fill the first screen before the title. */
+    aspect-ratio: 1;
+    object-fit: cover;
+    object-position: center 35%;
+    background: var(--ink);
+  }
+  .about__intro {
+    margin-top: var(--space-8);
+    font-size: var(--step-2);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    max-width: 30ch;
+  }
+  .about__paragraph {
+    margin-top: var(--space-6);
+    max-width: var(--measure);
+  }
+  .about__subtitle {
+    margin-top: var(--space-16);
+    padding-top: var(--space-3);
+    border-top: var(--rule-width) solid var(--fg);
+  }
+  .about__list {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+  .about__list div {
+    display: grid;
+    gap: var(--space-1) var(--space-6);
+  }
+  .about__list dt {
+    color: var(--fg-muted);
+  }
+  .about__list dd {
+    margin: 0;
+  }
+  @media (min-width: 40rem) {
+    .about__list div {
+      grid-template-columns: 12rem 1fr;
+      align-items: baseline;
+    }
+  }
+  @media (min-width: 64rem) {
+    .about {
+      grid-template-columns: repeat(12, 1fr);
+      align-items: start;
+    }
+    .about__figure {
+      grid-column: 1 / span 5;
+      position: sticky;
+      top: var(--space-8);
+    }
+    .about__figure :global(.about__photo) {
+      aspect-ratio: 4 / 5;
+    }
+    .about__text {
+      grid-column: 7 / -1;
+    }
+    .about__intro {
+      margin-top: var(--space-12);
+    }
+  }
+</style>
