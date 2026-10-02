@@ -7,8 +7,8 @@ export interface LightParams {
 
 export type LightInput = Partial<Record<keyof LightParams, string | number | undefined>>;
 
-/** Chosen by the owner at the 2026-10-01 gate: a brighter floor so the photo never disappears. */
-export const LIGHT_DEFAULTS: LightParams = { min: 0.6, max: 1.35, radius: 0.3 };
+/** Chosen by the owner at the 2026-10-01 gate: a brighter floor so the photo never disappears; revised 2026-10-02 (min 0.65, radius 0.65, light normalised by the shorter canvas side). */
+export const LIGHT_DEFAULTS: LightParams = { min: 0.65, max: 1.35, radius: 0.65 };
 
 /** Anything outside these is a typo, not an experiment, and is ignored. */
 const BOUNDS: Record<keyof LightParams, readonly [number, number]> = {

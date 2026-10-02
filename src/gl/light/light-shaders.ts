@@ -37,7 +37,8 @@ float hash(vec2 p) {
 void main() {
   vec3 base = texture2D(uImage, coverUv(vUv)).rgb;
   float lum = dot(base, vec3(0.2126, 0.7152, 0.0722));
-  vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+  // Same formula as lightSpaceScale() in light-space.ts: distance in units of the canvas's shorter side.
+  vec2 aspect = uResolution / min(uResolution.x, uResolution.y);
   float d = distance(vUv * aspect, uPointer * aspect);
   // 1 at the pointer, 0 from uRadius out (smoothstep with edge0 > edge1 is undefined in GLSL).
   float light = 1.0 - smoothstep(0.0, uRadius, d);

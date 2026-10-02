@@ -3,7 +3,7 @@ import { LIGHT_DEFAULTS, resolveLightParams } from '../../src/gl/light/light-par
 
 describe('resolveLightParams', () => {
   it('uses the owner-approved defaults when nothing is given', () => {
-    expect(LIGHT_DEFAULTS).toEqual({ min: 0.6, max: 1.35, radius: 0.3 });
+    expect(LIGHT_DEFAULTS).toEqual({ min: 0.65, max: 1.35, radius: 0.65 });
     expect(resolveLightParams({})).toEqual(LIGHT_DEFAULTS);
   });
 
@@ -20,7 +20,7 @@ describe('resolveLightParams', () => {
     expect(resolveLightParams({ min: 'abc', max: '', radius: ' ' })).toEqual(LIGHT_DEFAULTS);
     expect(resolveLightParams({ min: '-0.1', max: '3.5', radius: '0.01' })).toEqual(LIGHT_DEFAULTS);
     expect(resolveLightParams({ min: 'Infinity', max: Number.NaN, radius: '5' })).toEqual(LIGHT_DEFAULTS);
-    expect(resolveLightParams({ radius: '0.3' })).toEqual({ ...LIGHT_DEFAULTS, radius: 0.3 });
+    expect(resolveLightParams({ radius: '0.4' })).toEqual({ ...LIGHT_DEFAULTS, radius: 0.4 });
   });
 
   it('ignores the brightness overrides when they would make the edge brighter than the centre', () => {
