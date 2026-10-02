@@ -8,6 +8,7 @@ interface Props {
 }
 
 const { locale } = Astro.props;
+const year = new Date().getFullYear();
 ---
 
 <footer class="site-footer" data-surface="ink" aria-labelledby="footer-title">
@@ -53,7 +54,7 @@ const { locale } = Astro.props;
         </dd>
       </div>
     </dl>
-    <p class="footer-legal label">© 2026 Gonçalo Guerra</p>
+    <p class="footer-legal label">© {year} Gonçalo Guerra</p>
   </div>
 </footer>
 
