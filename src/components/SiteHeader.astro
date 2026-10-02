@@ -1,0 +1,88 @@
+---
+import type { Locale } from '../i18n/config';
+import { pathFor, type RouteKey } from '../i18n/routes';
+import { t } from '../i18n/ui';
+import LanguageSwitch from './LanguageSwitch.astro';
+
+interface Props {
+  locale: Locale;
+  /** The section the page belongs to; marks the matching link with aria-current. */
+  current: RouteKey;
+}
+
+const { locale, current } = Astro.props;
+const links = [
+  { key: 'work', label: t(locale, 'nav.work') },
+  { key: 'about', label: t(locale, 'nav.about') },
+] as const;
+---
+
+<header class="site-header wrap">
+  <a
+    class="brand label"
+    href={pathFor(locale, 'home')}
+    aria-current={current === 'home' ? 'page' : undefined}
+  >
+    Gonçalo Guerra
+  </a>
+  <nav class="site-nav" aria-label={t(locale, 'nav.label')}>
+    <ul role="list">
+      {links.map((link) => (
+        <li>
+          <a
+            class="label"
+            href={pathFor(locale, link.key)}
+            aria-current={current === link.key ? 'page' : undefined}
+          >
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+  <LanguageSwitch locale={locale} />
+</header>
+
+<style>
+  .site-header {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--space-6);
+    align-items: center;
+    min-height: 3.5rem;
+    border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .brand,
+  .site-nav a {
+    display: inline-block;
+    padding-block: var(--space-3);
+    text-decoration: none;
+  }
+  .site-nav ul {
+    display: flex;
+    gap: var(--space-6);
+    padding: 0;
+    list-style: none;
+  }
+  .site-nav a {
+    color: var(--fg-muted);
+  }
+  .site-nav a:hover,
+  .site-nav a[aria-current='page'] {
+    color: var(--fg);
+  }
+  .site-nav a[aria-current='page'] {
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-width);
+    text-underline-offset: 0.35em;
+  }
+  @media (max-width: 30rem) {
+    .site-header {
+      grid-template-columns: 1fr auto;
+      row-gap: 0;
+    }
+    .site-nav {
+      grid-row: 2;
+    }
+  }
+</style>

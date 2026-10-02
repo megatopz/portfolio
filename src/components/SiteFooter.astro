@@ -1,0 +1,143 @@
+---
+import { contact } from '../data/contact';
+import type { Locale } from '../i18n/config';
+import { t } from '../i18n/ui';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<footer class="site-footer" data-surface="ink" aria-labelledby="footer-title">
+  <div class="wrap footer-grid">
+    <h2 id="footer-title" class="label">
+      {t(locale, 'footer.contact')}
+    </h2>
+    <div class="footer-email">
+      <a class="footer-email__link" href={`mailto:${contact.email}`}>
+        {contact.email}
+      </a>
+      <button
+        type="button"
+        class="footer-copy label"
+        data-copy-email={contact.email}
+        data-copy-label={t(locale, 'footer.copy')}
+        data-copied-label={t(locale, 'footer.copied')}
+      >
+        {t(locale, 'footer.copy')}
+      </button>
+      <p class="visually-hidden" role="status" data-copy-status></p>
+    </div>
+    <dl class="footer-details">
+      <div>
+        <dt class="label">{t(locale, 'footer.phone')}</dt>
+        <dd>
+          <a href={contact.phone.href}>{contact.phone.display}</a>
+        </dd>
+      </div>
+      <div>
+        <dt class="label">{t(locale, 'footer.elsewhere')}</dt>
+        <dd>
+          <ul role="list">
+            {contact.social.map((link) => (
+              <li>
+                <a href={link.href} target="_blank" rel="noopener noreferrer">
+                  {link.name}
+                  <span class="visually-hidden"> {t(locale, 'footer.opensNewTab')}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </dd>
+      </div>
+    </dl>
+    <p class="footer-legal label">© 2026 Gonçalo Guerra</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    padding-block: var(--space-16) var(--space-8);
+  }
+  .footer-grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+  .footer-email {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-6);
+    align-items: baseline;
+  }
+  .footer-email__link {
+    font-family: var(--font-display);
+    /* Sized so the 26-character address fits on one line from 360 px up. */
+    font-size: clamp(1.2rem, 5.4vw, 4rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    text-decoration-thickness: var(--rule-width);
+    text-underline-offset: 0.15em;
+  }
+  .footer-copy {
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-4);
+    border: var(--rule-width) solid var(--rule);
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+  }
+  .footer-copy:hover {
+    border-color: var(--fg);
+  }
+  .footer-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-8) var(--space-16);
+  }
+  .footer-details dt {
+    color: var(--fg-muted);
+    margin-bottom: var(--space-2);
+  }
+  .footer-details dd {
+    margin: 0;
+  }
+  .footer-details ul {
+    display: flex;
+    gap: var(--space-6);
+    padding: 0;
+    list-style: none;
+  }
+  .footer-details a {
+    display: inline-block;
+    padding-block: var(--space-2);
+  }
+  .footer-legal {
+    padding-top: var(--space-6);
+    border-top: var(--rule-width) solid var(--rule);
+    color: var(--fg-muted);
+  }
+</style>
+
+<script>
+  // Delegated once: the footer is replaced on every client-side navigation.
+  document.addEventListener('click', async (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLButtonElement>('[data-copy-email]');
+    if (!button) return;
+    const status = button.parentElement?.querySelector('[data-copy-status]');
+    try {
+      await navigator.clipboard.writeText(button.dataset.copyEmail ?? '');
+    } catch {
+      return; // No clipboard access: the mailto link next to the button still works.
+    }
+    button.textContent = button.dataset.copiedLabel ?? '';
+    if (status) status.textContent = button.dataset.copiedLabel ?? '';
+    window.setTimeout(() => {
+      button.textContent = button.dataset.copyLabel ?? '';
+      if (status) status.textContent = '';
+    }, 1500);
+  });
+</script>
