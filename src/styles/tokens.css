@@ -36,6 +36,9 @@
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
     --rule-width: 1px;
+
+    --gutter: clamp(1rem, 4vw, 2.5rem);
+    --max-width: 90rem;
   }
 
   [data-surface='paper'] {

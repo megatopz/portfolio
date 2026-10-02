@@ -32,6 +32,25 @@
   .skip-link:focus-visible {
     transform: none;
   }
+  .wrap {
+    width: 100%;
+    max-width: var(--max-width);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .arrow-link {
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: baseline;
+    padding-block: var(--space-2);
+    text-decoration: none;
+    background: linear-gradient(currentColor, currentColor) left bottom / 0 var(--rule-width) no-repeat;
+    transition: background-size var(--t-base) var(--ease-out);
+  }
+  .arrow-link:hover,
+  .arrow-link:focus-visible {
+    background-size: 100% var(--rule-width);
+  }
   .label {
     font-family: var(--font-mono);
     font-size: var(--step--1);
