@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampDpr, driftPosition, lerp2, toUv } from '../../src/motion/math';
+import { clampDpr, INTRO_SECONDS, introPosition, LIGHT_REST, lerp2, toUv } from '../../src/motion/math';
 
 describe('lerp2', () => {
   it('moves a fraction of the way to the target', () => {
@@ -11,15 +11,28 @@ describe('lerp2', () => {
   });
 });
 
-describe('driftPosition', () => {
-  it('stays inside [0.2, 0.8] over a long period', () => {
-    for (let s = 0; s < 600; s += 0.5) {
-      const p = driftPosition(s);
-      expect(p.x).toBeGreaterThanOrEqual(0.2);
-      expect(p.x).toBeLessThanOrEqual(0.8);
-      expect(p.y).toBeGreaterThanOrEqual(0.2);
-      expect(p.y).toBeLessThanOrEqual(0.8);
+describe('introPosition', () => {
+  it('lasts about five seconds', () => {
+    expect(INTRO_SECONDS).toBeGreaterThanOrEqual(4);
+    expect(INTRO_SECONDS).toBeLessThanOrEqual(5);
+  });
+  it('moves during the entrance and stays inside [0.2, 0.8]', () => {
+    const seen = new Set<string>();
+    for (let s = 0; s <= INTRO_SECONDS; s += 0.25) {
+      const p = introPosition(s);
+      seen.add(`${p.x.toFixed(3)},${p.y.toFixed(3)}`);
+      for (const v of [p.x, p.y]) {
+        expect(v).toBeGreaterThanOrEqual(0.2);
+        expect(v).toBeLessThanOrEqual(0.8);
+      }
     }
+    expect(seen.size).toBeGreaterThan(10);
+  });
+  it('comes to rest without a jump and then never moves again (WCAG 2.2.2)', () => {
+    const near = introPosition(INTRO_SECONDS - 0.05);
+    expect(Math.hypot(near.x - LIGHT_REST.x, near.y - LIGHT_REST.y)).toBeLessThan(0.005);
+    for (const s of [INTRO_SECONDS, INTRO_SECONDS + 0.01, 60, 3600])
+      expect(introPosition(s)).toEqual(LIGHT_REST);
   });
 });
 

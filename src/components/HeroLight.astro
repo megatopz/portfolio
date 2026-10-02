@@ -1,15 +1,19 @@
 ---
 import type { ImageMetadata } from 'astro';
 import { getImage, Picture } from 'astro:assets';
+import { defaultLocale, type Locale } from '../i18n/config';
+import { t } from '../i18n/ui';
 
 interface Props {
   src: ImageMetadata;
   alt: string;
   /** Rendered width of the hero; the page sets it because only the page knows its layout. */
   sizes?: string;
+  /** Language of the tap hint; non-localized pages (lab) use the default. */
+  locale?: Locale;
 }
 
-const { src, alt, sizes = '100vw' } = Astro.props;
+const { src, alt, sizes = '100vw', locale = defaultLocale } = Astro.props;
 const texture = await getImage({ src, width: 1280, format: 'webp' });
 ---
 
@@ -25,6 +29,10 @@ const texture = await getImage({ src, width: 1280, format: 'webp' });
     class="hero-light__img"
   />
   <canvas class="hero-light__canvas" aria-hidden="true"></canvas>
+  {/* iPhone only, until motion permission is granted or denied; a click on it reaches the figure's tap handler. */}
+  <button type="button" class="hero-light__hint label" data-hero-light-hint hidden>
+    {t(locale, 'hero.tiltHint')}
+  </button>
 </figure>
 
 <style>
@@ -53,6 +61,21 @@ const texture = await getImage({ src, width: 1280, format: 'webp' });
     height: 100%;
     opacity: 0;
     transition: opacity var(--t-slow) var(--ease-out);
+  }
+  .hero-light__hint {
+    position: absolute;
+    bottom: var(--space-4);
+    left: 50%;
+    transform: translateX(-50%);
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-4);
+    border: var(--rule-width) solid color-mix(in srgb, var(--paper) 24%, transparent);
+    background: var(--ink);
+    color: var(--paper);
+    white-space: nowrap;
+  }
+  .hero-light__hint[hidden] {
+    display: none;
   }
   .hero-light[data-state='running'] .hero-light__canvas,
   .hero-light[data-state='paused'] .hero-light__canvas {

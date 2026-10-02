@@ -1,10 +1,10 @@
 import { Mesh, Program, Renderer, Texture, Triangle } from 'ogl';
-import { clampDpr, driftPosition, lerp2, type Vec2 } from '../../motion/math';
+import { clampDpr, INTRO_SECONDS, introPosition, lerp2, LIGHT_REST, type Vec2 } from '../../motion/math';
 import type { LightParams } from './light-params';
 import { fragment, vertex } from './light-shaders';
 
 export interface LightScene {
-  /** Pointer in UV space, or null to let the light drift on its own. */
+  /** Pointer in UV space, or null to hand the light back to its entrance or resting place. */
   setPointer(uv: Vec2 | null): void;
   start(): void;
   stop(): void;
@@ -50,10 +50,9 @@ export function createLightScene({
     fragment,
     uniforms: {
       uImage: { value: texture },
-      uPointer: { value: [0.5, 0.6] },
+      uPointer: { value: [LIGHT_REST.x, LIGHT_REST.y] },
       uResolution: { value: [1, 1] },
       uImageSize: { value: [image.naturalWidth, image.naturalHeight] },
-      uTime: { value: 0 },
       uIntensity: { value: 0 },
       uExposureMin: { value: min },
       uExposureMax: { value: max },
@@ -65,9 +64,15 @@ export function createLightScene({
   let raf = 0;
   let running = false;
   let target: Vec2 | null = null;
-  let current: Vec2 = { x: 0.5, y: 0.6 };
+  let current: Vec2 = { ...LIGHT_REST };
   let intensity = 0;
   const startedAt = performance.now();
+
+  // Frames are only drawn while something changes: the loop sleeps once the light has settled
+  // and wakes on input or a resize (which clears the canvas).
+  const wake = () => {
+    if (running && raf === 0) raf = requestAnimationFrame(frame);
+  };
 
   const resize = () => {
     const { clientWidth, clientHeight } = canvas;
@@ -75,6 +80,7 @@ export function createLightScene({
     renderer.setSize(clientWidth, clientHeight);
     releaseCssSize();
     program.uniforms.uResolution.value = [gl.canvas.width, gl.canvas.height];
+    wake();
   };
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
@@ -84,37 +90,46 @@ export function createLightScene({
     event.preventDefault();
     running = false;
     cancelAnimationFrame(raf);
+    raf = 0;
     onContextLost();
   };
   canvas.addEventListener('webglcontextlost', handleLost);
 
-  const frame = () => {
+  function frame() {
+    raf = 0;
     const seconds = (performance.now() - startedAt) / 1000;
-    current = lerp2(current, target ?? driftPosition(seconds), 0.08);
+    const goal = target ?? introPosition(seconds);
+    current = lerp2(current, goal, 0.08);
+    // Snap the last sub-pixel of the easing so the light truly stops.
+    const settled = Math.hypot(goal.x - current.x, goal.y - current.y) < 1e-4;
+    if (settled) current = { ...goal };
     intensity = Math.min(1, intensity + 0.02);
     program.uniforms.uPointer.value = [current.x, current.y];
-    program.uniforms.uTime.value = seconds;
     program.uniforms.uIntensity.value = intensity;
     renderer.render({ scene: mesh });
-    if (running) raf = requestAnimationFrame(frame);
-  };
+    const still = settled && intensity === 1 && (target !== null || seconds >= INTRO_SECONDS);
+    if (!still) wake();
+  }
 
   return {
     setPointer(uv) {
       target = uv;
+      wake();
     },
     start() {
       if (running) return;
       running = true;
-      raf = requestAnimationFrame(frame);
+      wake();
     },
     stop() {
       running = false;
       cancelAnimationFrame(raf);
+      raf = 0;
     },
     destroy() {
       running = false;
       cancelAnimationFrame(raf);
+      raf = 0;
       observer.disconnect();
       canvas.removeEventListener('webglcontextlost', handleLost);
       gl.getExtension('WEBGL_lose_context')?.loseContext();

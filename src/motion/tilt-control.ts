@@ -18,7 +18,7 @@ export interface TiltHost {
 export interface TiltControl {
   /** Listens to the sensor when allowed. The first reading after each start is the reference pose. */
   start(): void;
-  /** Removes the listener and hands the light back to the drift. */
+  /** Removes the listener and hands the light back to its resting place. */
   stop(): void;
   /** True while a tap is needed to ask for permission (iOS), until it has been asked once. */
   needsGesture(): boolean;
@@ -26,9 +26,14 @@ export interface TiltControl {
   requestFromGesture(): Promise<void>;
   /** True while readings are steering the light. */
   active(): boolean;
+  /**
+   * True once the sensor has stayed silent while permission can still be asked for (iPhone before a
+   * tap), until permission is granted or denied: the time to show a "tap to move the light" hint.
+   */
+  awaitingTap(): boolean;
 }
 
-/** Without a reading this soon after subscribing, assume there is no sensor and keep the drift. */
+/** Without a reading this soon after subscribing, assume there is no sensor (or no permission yet). */
 const SILENCE_MS = 1000;
 
 /**
@@ -64,8 +69,13 @@ function rememberDenial(host: TiltHost): void {
  * Phone tilt as a light source. `onTilt` receives the target UV for each reading, or null when
  * tilt stops steering. It listens as soon as it starts; when a requestPermission API exists and no
  * reading arrives (iOS before a grant), `needsGesture()` stays true so a tap can ask, once.
+ * `onAwaitingTap` is told each time `awaitingTap()` changes.
  */
-export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => void): TiltControl {
+export function createTiltControl(
+  host: TiltHost,
+  onTilt: (uv: Vec2 | null) => void,
+  onAwaitingTap: (awaiting: boolean) => void = () => {},
+): TiltControl {
   const api = host.DeviceOrientationEvent;
   const askable = typeof api?.requestPermission === 'function';
   let permission: 'none' | 'ask' | 'asking' | 'granted' | 'denied' = !api
@@ -80,6 +90,13 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
   let reference: TiltReference | null = null;
   let referenceAngle = 0;
   let silence: ReturnType<typeof setTimeout> | undefined;
+  let awaiting = false;
+
+  const setAwaiting = (value: boolean) => {
+    if (value === awaiting) return;
+    awaiting = value;
+    onAwaitingTap(value);
+  };
 
   const angle = () => host.screen?.orientation?.angle ?? host.orientation ?? 0;
 
@@ -89,6 +106,7 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
     clearTimeout(silence);
     // Readings without a prompt (Chrome also exposes requestPermission): nothing to ask for.
     if (permission === 'ask') permission = 'granted';
+    setAwaiting(false);
     // Recalibrate when the screen turns: the way the phone is held changes with it.
     if (reference === null || angle() !== referenceAngle) {
       reference = { beta, gamma };
@@ -113,7 +131,10 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
     reference = null;
     host.addEventListener('deviceorientation', onReading);
     silence = setTimeout(() => {
-      if (reference === null) unsubscribe();
+      if (reference !== null) return;
+      unsubscribe();
+      // Silent although it could ask: on iPhone, readings only start after a tap grants permission.
+      if (permission === 'ask') setAwaiting(true);
     }, SILENCE_MS);
   };
 
@@ -135,6 +156,7 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
         (result) => {
           permission = result === 'granted' ? 'granted' : 'denied';
           if (permission === 'denied') rememberDenial(host);
+          setAwaiting(false);
           // Resubscribe so a granted sensor gets a fresh silence window; a denial just stops.
           unsubscribe();
           subscribe();
@@ -142,10 +164,12 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
         () => {
           permission = 'denied';
           rememberDenial(host);
+          setAwaiting(false);
           unsubscribe();
         },
       );
     },
     active: () => listening && reference !== null,
+    awaitingTap: () => awaiting,
   };
 }

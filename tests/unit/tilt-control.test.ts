@@ -93,7 +93,7 @@ describe('createTiltControl without a permission API (Android)', () => {
     expect(control.active()).toBe(false);
   });
 
-  it('gives up and keeps the drift when no reading arrives within about a second', () => {
+  it('gives up and leaves the light at rest when no reading arrives within about a second', () => {
     const fake = fakeHost({ api: 'open' });
     const { control, seen } = setup(fake);
     control.start();
@@ -115,7 +115,7 @@ describe('createTiltControl without a permission API (Android)', () => {
     expect(fake.listeners()).toBe(1);
   });
 
-  it('removes the listener on stop, hands control back to the drift and recalibrates on the next start', () => {
+  it('removes the listener on stop, hands the light back to rest and recalibrates on the next start', () => {
     const fake = fakeHost({ api: 'open' });
     const { control, seen } = setup(fake);
     control.start();
@@ -202,7 +202,7 @@ describe('createTiltControl with a permission API', () => {
     expect(fake.listeners()).toBe(1);
   });
 
-  it('keeps the drift and never asks again when permission is denied', async () => {
+  it('stays at rest and never asks again when permission is denied', async () => {
     const fake = fakeHost({ api: 'denied' });
     const { control } = setup(fake);
     control.start();
@@ -286,5 +286,86 @@ describe('createTiltControl without the API at all', () => {
     expect(control.needsGesture()).toBe(false);
     await control.requestFromGesture();
     expect(fake.host.addEventListener).not.toHaveBeenCalled();
+  });
+});
+
+describe('the tap hint (iPhone, before permission)', () => {
+  function withHint(fake: ReturnType<typeof fakeHost>) {
+    const hints: boolean[] = [];
+    const control = createTiltControl(
+      fake.host,
+      () => {},
+      (awaiting) => hints.push(awaiting),
+    );
+    return { control, hints };
+  }
+
+  it('is offered once the sensor stays silent for lack of permission', () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control, hints } = withHint(fake);
+    control.start();
+    // Not straight away: Chrome exposes requestPermission too, and its readings arrive unasked.
+    expect(hints).toEqual([]);
+    expect(control.awaitingTap()).toBe(false);
+    vi.advanceTimersByTime(1_100);
+    expect(hints).toEqual([true]);
+    expect(control.awaitingTap()).toBe(true);
+  });
+
+  it('is never offered when readings flow without asking', () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control, hints } = withHint(fake);
+    control.start();
+    fake.emit({ beta: 30, gamma: 0 });
+    vi.advanceTimersByTime(5_000);
+    expect(hints).toEqual([]);
+  });
+
+  it('goes away once permission is granted', async () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control, hints } = withHint(fake);
+    control.start();
+    vi.advanceTimersByTime(1_100);
+    await control.requestFromGesture();
+    expect(hints).toEqual([true, false]);
+    expect(control.awaitingTap()).toBe(false);
+  });
+
+  it('goes away once permission is denied, or the request fails', async () => {
+    for (const api of ['denied', 'throws'] as const) {
+      const fake = fakeHost({ api });
+      const { control, hints } = withHint(fake);
+      control.start();
+      vi.advanceTimersByTime(1_100);
+      await control.requestFromGesture();
+      expect(hints).toEqual([true, false]);
+    }
+  });
+
+  it('is not offered again after pausing and resuming while still waiting', () => {
+    const fake = fakeHost({ api: 'granted' });
+    const { control, hints } = withHint(fake);
+    control.start();
+    vi.advanceTimersByTime(1_100);
+    control.stop();
+    control.start();
+    vi.advanceTimersByTime(1_100);
+    expect(hints).toEqual([true]);
+    expect(control.awaitingTap()).toBe(true);
+  });
+
+  it('is never offered without a permission API, or after a denial earlier in the session', async () => {
+    for (const fake of [fakeHost({ api: 'open' }), fakeHost({ api: 'none' })]) {
+      const { control, hints } = withHint(fake);
+      control.start();
+      vi.advanceTimersByTime(1_100);
+      expect(hints).toEqual([]);
+    }
+    const storage = fakeStorage();
+    await setup(fakeHost({ api: 'denied', storage })).control.requestFromGesture();
+    const { control, hints } = withHint(fakeHost({ api: 'denied', storage }));
+    control.start();
+    vi.advanceTimersByTime(1_100);
+    expect(hints).toEqual([]);
   });
 });

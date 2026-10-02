@@ -14,7 +14,6 @@ uniform sampler2D uImage;
 uniform vec2 uPointer;
 uniform vec2 uResolution;
 uniform vec2 uImageSize;
-uniform float uTime;
 uniform float uIntensity;
 uniform float uExposureMin;
 uniform float uExposureMax;
@@ -44,7 +43,8 @@ void main() {
   float light = 1.0 - smoothstep(0.0, uRadius, d);
   // uIntensity = 0 reproduces the static image exactly (exposure 1.0)
   float exposure = mix(1.0, mix(uExposureMin, uExposureMax, light), uIntensity);
-  float grain = (hash(vUv * uResolution + fract(uTime)) - 0.5) * 0.08 * uIntensity;
+  // Static grain, fixed to the canvas pixels (WCAG 2.2.2: nothing moves on its own after the entrance).
+  float grain = (hash(vUv * uResolution) - 0.5) * 0.08 * uIntensity;
   gl_FragColor = vec4(vec3(clamp(lum * exposure + grain, 0.0, 1.0)), 1.0);
 }
 `;

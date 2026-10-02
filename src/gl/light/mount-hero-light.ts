@@ -22,6 +22,7 @@ function whenIdle(callback: () => void): void {
 /** Mounts the light effect on a [data-hero-light] element. Returns a cleanup function. */
 export function mountHeroLight(root: HTMLElement): () => void {
   const canvas = root.querySelector('canvas');
+  const hint = root.querySelector<HTMLElement>('[data-hero-light-hint]');
   const textureUrl = root.dataset.texture;
   const setState = (state: HeroLightState) => {
     root.dataset.state = state;
@@ -37,14 +38,23 @@ export function mountHeroLight(root: HTMLElement): () => void {
   let visible = true;
   let disposed = false;
 
-  // Without a fine pointer (phones), tilting the phone steers the light; until then it drifts.
+  // The tap hint shows only while there is a light to move and iOS still waits for a tap to ask.
+  const syncHint = () => {
+    if (hint) hint.hidden = !(scene !== null && tilt?.awaitingTap() === true);
+  };
+
+  // Without a fine pointer (phones), tilting the phone steers the light; until then it rests.
   const tilt: TiltControl | null = finePointer
     ? null
-    : createTiltControl(window as unknown as TiltHost, (uv) => {
-        scene?.setPointer(uv);
-        if (uv === null) delete root.dataset.tilt;
-        else root.dataset.tilt = 'on';
-      });
+    : createTiltControl(
+        window as unknown as TiltHost,
+        (uv) => {
+          scene?.setPointer(uv);
+          if (uv === null) delete root.dataset.tilt;
+          else root.dataset.tilt = 'on';
+        },
+        () => syncHint(),
+      );
 
   const syncRunning = () => {
     if (scene === null) return;
@@ -63,6 +73,7 @@ export function mountHeroLight(root: HTMLElement): () => void {
     tilt?.stop();
     scene?.destroy();
     scene = null;
+    syncHint();
   };
 
   const onPointerMove = (event: PointerEvent) =>
@@ -154,5 +165,6 @@ export function mountHeroLight(root: HTMLElement): () => void {
     root.removeEventListener('pointermove', onPointerMove);
     root.removeEventListener('pointerleave', onPointerLeave);
     root.removeEventListener('click', onTap);
+    if (hint) hint.hidden = true;
   };
 }

@@ -8,9 +8,24 @@ export function lerp2(current: Vec2, target: Vec2, factor: number): Vec2 {
   return { x: current.x + (target.x - current.x) * k, y: current.y + (target.y - current.y) * k };
 }
 
-/** Slow Lissajous path inside [0.2, 0.8] used when there is no fine pointer. */
-export function driftPosition(seconds: number): Vec2 {
-  return { x: 0.5 + 0.3 * Math.sin(seconds * 0.23), y: 0.5 + 0.3 * Math.sin(seconds * 0.17 + 1.3) };
+/** Where the light rests when no input steers it: after the entrance, and when the pointer leaves. */
+export const LIGHT_REST: Vec2 = { x: 0.5, y: 0.6 };
+
+/** Length of the light's entrance. WCAG 2.2.2: motion that starts on its own stops within 5 s. */
+export const INTRO_SECONDS = 4.5;
+
+/**
+ * The light's entrance: a sweep across the photo whose amplitude eases to zero (smoothstep, so the
+ * speed is zero too) and lands on LIGHT_REST, where it stays. Inside [0.2, 0.8] throughout.
+ */
+export function introPosition(seconds: number): Vec2 {
+  if (!(seconds < INTRO_SECONDS)) return LIGHT_REST;
+  const k = Math.max(seconds, 0) / INTRO_SECONDS;
+  const amplitude = 1 - k * k * (3 - 2 * k);
+  return {
+    x: LIGHT_REST.x + 0.3 * amplitude * Math.sin(seconds * 1.1),
+    y: LIGHT_REST.y + 0.2 * amplitude * Math.sin(seconds * 0.8 + 1.3),
+  };
 }
 
 export function clampDpr(devicePixelRatio: number, max = 1.5): number {

@@ -150,8 +150,8 @@ Cada animação tem de servir narrativa, hierarquia ou feedback; o conteúdo nun
 
 | Momento | Comportamento | Duração | Com `prefers-reduced-motion` |
 | --- | --- | --- | --- |
-| Hero: luz | Shader WebGL; o cursor é uma fonte de luz com inércia que revela a foto e o grão | Contínuo | Foto estática com luz fixa |
-| Hero: mobile | A luz deriva devagar sozinha; sem giroscópio | Contínuo, lento | Foto estática |
+| Hero: luz | Shader WebGL; entrada automática de ~4,5 s e depois para (WCAG 2.2.2); a partir daí só o cursor move a luz, com inércia; grão estático | Entrada < 5 s, depois só por input | Foto estática com luz fixa |
+| Hero: mobile | A mesma entrada; depois a inclinação do telemóvel guia a luz. No iPhone, até autorizar ou recusar, um botão discreto "Toca para mover a luz" pede a permissão | Entrada < 5 s, depois só por input | Foto estática, sem pista |
 | Transição de página | Dissolução de tinta por ruído, orientada no sentido da navegação | 450–600 ms | Crossfade de 150 ms |
 | Entrada de secções | Texto sobe 8–12px e aparece, uma vez por sessão | 300–400 ms | Aparece sem movimento |
 | Índice de trabalho | Pré-visualização segue o cursor com atraso; em teclado aparece fixa junto à linha em foco | 200 ms | Aparece sem movimento |

@@ -11,6 +11,7 @@ export const ui = {
     'nav.about': 'Sobre',
     'home.title': 'Gonçalo Guerra — Designer e developer web',
     'home.description': 'Portfolio de Gonçalo Guerra, designer e developer web.',
+    'hero.tiltHint': 'Toca para mover a luz',
   },
   en: {
     'skip.toMain': 'Skip to content',
@@ -22,6 +23,7 @@ export const ui = {
     'nav.about': 'About',
     'home.title': 'Gonçalo Guerra — Web designer and developer',
     'home.description': 'Portfolio of Gonçalo Guerra, web designer and developer.',
+    'hero.tiltHint': 'Tap to move the light',
   },
 } as const satisfies Record<Locale, Record<string, string>>;
 

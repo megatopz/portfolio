@@ -14,6 +14,27 @@ test('effect starts when WebGL is available', async ({ page }) => {
   await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
 });
 
+test('the light stops after its entrance and then moves only with the pointer (WCAG 2.2.2)', async ({
+  page,
+}) => {
+  await page.goto('/lab/luz/');
+  await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+  const canvas = hero(page).locator('canvas');
+  // The entrance lasts under 5 s; past it, no frame changes on its own (light and grain are still).
+  await page.waitForTimeout(5_500);
+  const settled = await canvas.screenshot();
+  await page.waitForTimeout(1_000);
+  // Buffer.equals, not toEqual: a failing toEqual on two PNGs builds a diff for minutes.
+  expect((await canvas.screenshot()).equals(settled), 'a frame changed with no input').toBe(true);
+  // A mouse is a fine pointer: there is no tap hint.
+  await expect(hero(page).getByRole('button')).toBeHidden();
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error('no canvas box');
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.15);
+  await page.waitForTimeout(1_000);
+  expect((await canvas.screenshot()).equals(settled), 'the pointer did not move the light').toBe(false);
+});
+
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
   test('stays a static photo', async ({ page }) => {
@@ -182,11 +203,79 @@ test.describe('on a phone', () => {
     await expect(hero(page)).not.toHaveAttribute('data-tilt');
   });
 
-  test('keeps drifting when the sensor stays silent', async ({ page }) => {
+  test('stays at rest, without a tap hint, when the sensor stays silent and there is nothing to ask', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      delete (DeviceOrientationEvent as { requestPermission?: unknown }).requestPermission;
+    });
     await page.goto('/lab/luz/');
     await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
     await page.waitForTimeout(1_500);
     await expect(hero(page)).toHaveAttribute('data-state', 'running');
     await expect(hero(page)).not.toHaveAttribute('data-tilt');
+    await expect(hero(page).getByRole('button')).toBeHidden();
+  });
+});
+
+test.describe('on an iPhone, before motion permission', () => {
+  const { viewport, userAgent, deviceScaleFactor } = devices['iPhone 15'];
+  test.use({ viewport, userAgent, deviceScaleFactor, isMobile: true, hasTouch: true });
+
+  /** iOS: requestPermission exists and no reading arrives until it resolves 'granted'. */
+  const fakeIosPermission = (page: Page, answer: 'granted' | 'denied') =>
+    page.addInitScript((result) => {
+      const w = window as unknown as { asked: number };
+      w.asked = 0;
+      (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> }).requestPermission =
+        () => {
+          w.asked++;
+          return Promise.resolve(result);
+        };
+    }, answer);
+  const hint = (page: Page) => hero(page).getByRole('button', { name: 'Toca para mover a luz' });
+
+  test('shows a tap hint that asks for permission and goes away once granted', async ({ page }) => {
+    await fakeIosPermission(page, 'granted');
+    await page.goto('/lab/luz/');
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+    await expect(hint(page)).toBeVisible();
+    await hint(page).tap();
+    await expect(hint(page)).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as { asked: number }).asked)).toBe(1);
+  });
+
+  test('the hint goes away when permission is denied and does not come back this session', async ({
+    page,
+  }) => {
+    await fakeIosPermission(page, 'denied');
+    await page.goto('/lab/luz/');
+    await expect(hint(page)).toBeVisible({ timeout: 10_000 });
+    await hint(page).tap();
+    await expect(hint(page)).toBeHidden();
+    await page.reload();
+    await expect(hero(page)).toHaveAttribute('data-state', 'running', { timeout: 10_000 });
+    await page.waitForTimeout(1_500);
+    await expect(hint(page)).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as { asked: number }).asked)).toBe(0);
+  });
+
+  test('a tap anywhere on the photo also asks, and hides the hint', async ({ page }) => {
+    await fakeIosPermission(page, 'granted');
+    await page.goto('/lab/luz/');
+    await expect(hint(page)).toBeVisible({ timeout: 10_000 });
+    const box = await hero(page).boundingBox();
+    if (box === null) throw new Error('no hero box');
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height * 0.3);
+    await expect(hint(page)).toBeHidden();
+  });
+
+  test('has no hint with reduced motion (there is no light to move)', async ({ page }) => {
+    await fakeIosPermission(page, 'granted');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/lab/luz/');
+    await expect(hero(page)).toHaveAttribute('data-state', 'off', { timeout: 5_000 });
+    await page.waitForTimeout(1_500);
+    await expect(hint(page)).toBeHidden();
   });
 });

@@ -14,4 +14,8 @@ describe('ui dictionary', () => {
     expect(t('pt', 'nav.work')).toBe('Trabalho');
     expect(t('en', 'nav.work')).toBe('Work');
   });
+  it('has the tap hint for the hero light in both languages', () => {
+    expect(t('pt', 'hero.tiltHint')).toBe('Toca para mover a luz');
+    expect(t('en', 'hero.tiltHint')).toBe('Tap to move the light');
+  });
 });
