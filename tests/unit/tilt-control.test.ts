@@ -5,7 +5,23 @@ import type { Vec2 } from '../../src/motion/math';
 type Reading = { beta: number | null; gamma: number | null };
 type Handler = (event: Reading) => void;
 
-function fakeHost(options: { api?: 'none' | 'open' | 'granted' | 'denied' | 'throws'; angle?: number } = {}) {
+/** A sessionStorage stand-in; pass the same one to two hosts to model two mounts in one session. */
+function fakeStorage() {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => void items.set(key, value),
+  };
+}
+
+function fakeHost(
+  options: {
+    api?: 'none' | 'open' | 'granted' | 'denied' | 'throws';
+    angle?: number;
+    storage?: ReturnType<typeof fakeStorage> | 'throws';
+    legacyOrientation?: number;
+  } = {},
+) {
   const { api = 'open' } = options;
   const handlers = new Set<Handler>();
   const requestPermission = vi.fn(() =>
@@ -16,9 +32,18 @@ function fakeHost(options: { api?: 'none' | 'open' | 'granted' | 'denied' | 'thr
   const host = {
     addEventListener: vi.fn((_type: 'deviceorientation', handler: Handler) => handlers.add(handler)),
     removeEventListener: vi.fn((_type: 'deviceorientation', handler: Handler) => handlers.delete(handler)),
-    screen: { orientation: { angle: options.angle ?? 0 } },
+    screen: options.legacyOrientation === undefined ? { orientation: { angle: options.angle ?? 0 } } : {},
+    ...(options.legacyOrientation === undefined ? {} : { orientation: options.legacyOrientation }),
     ...(api === 'none' ? {} : { DeviceOrientationEvent: api === 'open' ? {} : { requestPermission } }),
   };
+  const storage = options.storage ?? fakeStorage();
+  Object.defineProperty(host, 'sessionStorage', {
+    get() {
+      // Browsers throw on access when storage is blocked (e.g. cookies disabled).
+      if (storage === 'throws') throw new DOMException('blocked', 'SecurityError');
+      return storage;
+    },
+  });
   return {
     host: host as unknown as TiltHost,
     requestPermission,
@@ -27,7 +52,7 @@ function fakeHost(options: { api?: 'none' | 'open' | 'granted' | 'denied' | 'thr
       for (const handler of [...handlers]) handler(reading);
     },
     rotate(angle: number) {
-      host.screen.orientation.angle = angle;
+      if (host.screen.orientation) host.screen.orientation.angle = angle;
     },
   };
 }
@@ -208,6 +233,48 @@ describe('createTiltControl with a permission API', () => {
     control.stop();
     await pending;
     expect(fake.listeners()).toBe(0);
+  });
+});
+
+describe('a denial lasts the whole session', () => {
+  it('a later mount neither asks again nor waits for a tap', async () => {
+    const storage = fakeStorage();
+    const first = fakeHost({ api: 'denied', storage });
+    await setup(first).control.requestFromGesture();
+    const second = fakeHost({ api: 'denied', storage });
+    const { control } = setup(second);
+    control.start();
+    expect(control.needsGesture()).toBe(false);
+    await control.requestFromGesture();
+    expect(second.requestPermission).not.toHaveBeenCalled();
+    expect(second.listeners()).toBe(0);
+  });
+
+  it('is remembered in memory when sessionStorage throws', async () => {
+    await setup(fakeHost({ api: 'denied', storage: 'throws' })).control.requestFromGesture();
+    const second = fakeHost({ api: 'denied', storage: 'throws' });
+    const { control } = setup(second);
+    expect(control.needsGesture()).toBe(false);
+    await control.requestFromGesture();
+    expect(second.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('a fresh session still asks', () => {
+    const { control } = setup(fakeHost({ api: 'granted' }));
+    expect(control.needsGesture()).toBe(true);
+  });
+});
+
+describe('legacy screen angle', () => {
+  it('uses window.orientation when screen.orientation is missing (-90 means 270)', () => {
+    const fake = fakeHost({ api: 'open', legacyOrientation: -90 });
+    const { control, seen } = setup(fake);
+    control.start();
+    fake.emit({ beta: 40, gamma: 0 });
+    fake.emit({ beta: 40, gamma: 30 });
+    // Landscape secondary: the device's right edge is the bottom of the screen.
+    expect(seen.at(-1)?.x).toBeCloseTo(0.5);
+    expect(seen.at(-1)?.y).toBeCloseTo(0.15);
   });
 });
 

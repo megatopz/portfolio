@@ -11,6 +11,8 @@ export interface TiltHost {
   screen?: { orientation?: { angle: number } };
   /** Legacy screen angle, for Safari before 16.4 (no screen.orientation). */
   orientation?: number;
+  /** Remembers a denial across remounts (HeroLight mounts again on every page load). */
+  sessionStorage?: Pick<Storage, 'getItem' | 'setItem'>;
 }
 
 export interface TiltControl {
@@ -30,6 +32,35 @@ export interface TiltControl {
 const SILENCE_MS = 1000;
 
 /**
+ * "If denied, do not ask again in this session": the outcome outlives one mount. sessionStorage
+ * also covers full reloads; when it is blocked (access throws), module scope still covers the
+ * client-side navigations of this document. A grant needs no record: within the document the
+ * sensor keeps sending readings, which the control takes as permission.
+ */
+const DENIED_KEY = 'hero-light:tilt-denied';
+let deniedInMemory = false;
+
+function wasDenied(host: TiltHost): boolean {
+  try {
+    const storage = host.sessionStorage;
+    if (storage) return storage.getItem(DENIED_KEY) === '1';
+  } catch {
+    // Blocked storage: fall back to memory.
+  }
+  return deniedInMemory;
+}
+
+function rememberDenial(host: TiltHost): void {
+  try {
+    const storage = host.sessionStorage;
+    if (storage) return storage.setItem(DENIED_KEY, '1');
+  } catch {
+    // Blocked storage (or quota): fall back to memory.
+  }
+  deniedInMemory = true;
+}
+
+/**
  * Phone tilt as a light source. `onTilt` receives the target UV for each reading, or null when
  * tilt stops steering. It listens as soon as it starts; when a requestPermission API exists and no
  * reading arrives (iOS before a grant), `needsGesture()` stays true so a tap can ask, once.
@@ -39,9 +70,11 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
   const askable = typeof api?.requestPermission === 'function';
   let permission: 'none' | 'ask' | 'asking' | 'granted' | 'denied' = !api
     ? 'none'
-    : askable
-      ? 'ask'
-      : 'granted';
+    : !askable
+      ? 'granted'
+      : wasDenied(host)
+        ? 'denied'
+        : 'ask';
   let wanted = false;
   let listening = false;
   let reference: TiltReference | null = null;
@@ -101,12 +134,14 @@ export function createTiltControl(host: TiltHost, onTilt: (uv: Vec2 | null) => v
       return api.requestPermission().then(
         (result) => {
           permission = result === 'granted' ? 'granted' : 'denied';
+          if (permission === 'denied') rememberDenial(host);
           // Resubscribe so a granted sensor gets a fresh silence window; a denial just stops.
           unsubscribe();
           subscribe();
         },
         () => {
           permission = 'denied';
+          rememberDenial(host);
           unsubscribe();
         },
       );

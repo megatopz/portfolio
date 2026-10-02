@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const ink = '[data-ink]';
-/** Cold navigations on the CI runner (SwiftShader, shared CPU) can take several seconds to settle. */
-const IDLE_TIMEOUT = process.env.CI ? 5_000 : 3_000;
+/** Local timeouts are the tight ones; only the CI runner (SwiftShader, shared CPU) gets 5 s to settle. */
+const onCi = (local: number) => (process.env.CI ? 5_000 : local);
+const IDLE_TIMEOUT = onCi(2_000);
 /** Local performance promise; the CI runner gets headroom because software WebGL is much slower. */
 const TRANSITION_LIMIT = process.env.CI ? 3_000 : 1_500;
 
@@ -64,7 +65,7 @@ test('rapid successive navigations do not leave the ink stuck', async ({ page })
   await page.getByRole('link', { name: 'Ir para luz' }).click({ noWaitAfter: true });
   await expect(page).toHaveURL(/\/lab\/(luz|tinta-b)\/$/);
   await page.waitForLoadState();
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: onCi(3_000) });
   await page.waitForTimeout(700);
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle');
   const log = await inkLog(page);
@@ -173,7 +174,7 @@ test('a page restored from the back/forward cache is never left covered', async 
   await page.getByRole('link', { name: 'Ir para tinta B' }).click({ noWaitAfter: true });
   await expect(page.locator(ink)).toHaveAttribute('data-state', 'covered', { timeout: 5_000 });
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
-  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: IDLE_TIMEOUT });
+  await expect(page.locator(ink)).toHaveAttribute('data-state', 'idle', { timeout: onCi(1_000) });
 });
 
 test('a fresh page load does not uncover a navigation in progress', async ({ page }) => {
