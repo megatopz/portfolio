@@ -39,17 +39,27 @@
     padding-inline: var(--gutter);
   }
   .arrow-link {
+    position: relative;
     display: inline-flex;
     gap: var(--space-2);
     align-items: baseline;
     padding-block: var(--space-2);
     text-decoration: none;
-    background: linear-gradient(currentColor, currentColor) left bottom / 0 var(--rule-width) no-repeat;
-    transition: background-size var(--t-base) var(--ease-out);
   }
-  .arrow-link:hover,
-  .arrow-link:focus-visible {
-    background-size: 100% var(--rule-width);
+  .arrow-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-bottom: var(--rule-width) solid currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--t-base) var(--ease-out);
+  }
+  .arrow-link:hover::after,
+  .arrow-link:focus-visible::after {
+    transform: scaleX(1);
   }
   .label {
     font-family: var(--font-mono);
