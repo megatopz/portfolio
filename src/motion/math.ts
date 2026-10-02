@@ -35,7 +35,7 @@ export interface TiltReference {
 }
 
 /** Degrees of tilt from the reference that reach the edge of the light's zone. */
-const TILT_RANGE = 30;
+const TILT_RANGE = 18;
 /** Half-width of the zone the tilt covers: 0.5 ± 0.35 = 0.15..0.85. */
 const TILT_REACH = 0.35;
 

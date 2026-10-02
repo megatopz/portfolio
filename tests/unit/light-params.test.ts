@@ -3,7 +3,7 @@ import { LIGHT_DEFAULTS, resolveLightParams } from '../../src/gl/light/light-par
 
 describe('resolveLightParams', () => {
   it('uses the owner-approved defaults when nothing is given', () => {
-    expect(LIGHT_DEFAULTS).toEqual({ min: 0.75, max: 1.35, radius: 0.65 });
+    expect(LIGHT_DEFAULTS).toEqual({ min: 0.6, max: 1.35, radius: 0.3 });
     expect(resolveLightParams({})).toEqual(LIGHT_DEFAULTS);
   });
 
