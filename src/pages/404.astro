@@ -2,12 +2,43 @@
 import Base from '../layouts/Base.astro';
 ---
 
-<Base title="404 — Gonçalo Guerra" description="Página não encontrada · Page not found" noindex>
-  <h1>404</h1>
-  <p lang="pt">
-    Esta página não existe. <a href="/pt/">Voltar ao início</a>
-  </p>
-  <p lang="en">
-    This page does not exist. <a href="/en/">Back to home</a>
-  </p>
+<Base title="404 — Gonçalo Guerra" description="Página não encontrada · Page not found" noindex surface="ink">
+  <section class="wrap not-found" aria-labelledby="not-found-title">
+    <h1 id="not-found-title" class="not-found__code">
+      404
+    </h1>
+    <p lang="pt">
+      Esta página não existe.{' '}
+      <a class="arrow-link" href="/pt/">
+        Voltar ao início <span aria-hidden="true">→</span>
+      </a>
+    </p>
+    <p lang="en">
+      This page does not exist.{' '}
+      <a class="arrow-link" href="/en/">
+        Back to home <span aria-hidden="true">→</span>
+      </a>
+    </p>
+  </section>
 </Base>
+
+<style>
+  .not-found {
+    display: grid;
+    align-content: center;
+    gap: var(--space-4);
+    min-height: 100svh;
+    padding-block: var(--space-16);
+  }
+  .not-found__code {
+    font-family: var(--font-display);
+    font-size: var(--step-hero);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
+    margin-bottom: var(--space-8);
+  }
+  .not-found p {
+    font-size: var(--step-1);
+  }
+</style>

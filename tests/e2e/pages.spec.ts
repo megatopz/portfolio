@@ -87,3 +87,16 @@ test('the language switch keeps the section', async ({ page }) => {
   await page.locator('.lang-switch a[hreflang="pt"]').click();
   await expect(page).toHaveURL(/\/pt\/trabalho\/$/);
 });
+
+test.describe('at 360 px wide', () => {
+  test.use({ viewport: { width: 360, height: 780 } });
+  for (const path of [...Object.values(pages.pt), ...Object.values(pages.en), '/nao-existe/']) {
+    test(`${path} has no horizontal overflow`, async ({ page }) => {
+      await page.goto(path);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow).toBe(0);
+    });
+  }
+});

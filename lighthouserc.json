@@ -2,7 +2,12 @@
   "ci": {
     "collect": {
       "staticDistDir": "./dist",
-      "url": ["http://localhost/pt/", "http://localhost/lab/luz/"],
+      "url": [
+        "http://localhost/pt/",
+        "http://localhost/pt/trabalho/",
+        "http://localhost/pt/sobre/",
+        "http://localhost/lab/luz/"
+      ],
       "numberOfRuns": 3,
       "settings": { "formFactor": "mobile", "throttlingMethod": "simulate" }
     },

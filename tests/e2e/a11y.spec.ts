@@ -4,6 +4,10 @@ import { expect, test } from '@playwright/test';
 const pages = [
   '/pt/',
   '/en/',
+  '/pt/trabalho/',
+  '/en/work/',
+  '/pt/sobre/',
+  '/en/about/',
   '/nao-existe/',
   '/lab/tipografia/',
   '/lab/luz/',
@@ -42,4 +46,7 @@ test('lab pages are not indexed and are excluded from the sitemap', async ({ pag
   expect(sitemap).not.toContain('/lab/');
   expect(sitemap).toContain('/pt/');
   expect(sitemap).toContain('/en/');
+  for (const path of ['/pt/trabalho/', '/en/work/', '/pt/sobre/', '/en/about/']) {
+    expect(sitemap).toContain(path);
+  }
 });
